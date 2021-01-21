@@ -2,7 +2,7 @@
 A more modern http framework benchmarker.
 
 ```
-F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 5
+F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 5s
 
 Benchmarking 60 connections @ http://127.0.0.1:5000 for 5s
   Latencies:
@@ -62,7 +62,7 @@ FLAGS:
 
 OPTIONS:
     -c, --connections <connections>    Set the amount of concurrent e.g. '-c 512' [default: 1]
-    -d, --duration <duration>          Set the duration of the benchmark in seconds.
+    -d, --duration <duration>          Set the duration of the benchmark, e.g. "14d 11h 6m 5s".
     -h, --host <host>                  Set the host to bench e.g. '-h http://127.0.0.1:5050'
     -p, --protocol <protocol>          Set the client to use http2 only. (default is http/1) 
                                        e.g. '-protocol 1' [default: 1]
