@@ -74,7 +74,7 @@ async fn run(settings: BenchmarkSettings) {
 
     println!(
         "Benchmarking {} connections @ {} for {}s",
-        string(settings.connections).blue(),
+        string(settings.connections).cyan(),
         settings.host,
         settings.duration.as_secs(),
     );

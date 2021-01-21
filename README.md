@@ -1,8 +1,8 @@
-# rww
+# rewrk
 A more modern http framework benchmarker.
 
 ```
-F:\rww> rww -h http://127.0.0.1:5000 -c 60 -t 12 -d 5
+F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 5
 
 Benchmarking 60 connections @ http://127.0.0.1:5000 for 5s
   Latencies:
@@ -20,7 +20,7 @@ The motivation behind this project extends from developers tunnel visioning on b
 The issue is that wrk only handle *some* of the HTTP spec and is entirely biased towards frameworks and servers that can make heavy use of HTTP/1 Pipelining which is no longer enabled in most modern browsers or clients, this can give a very unfare and unreasonable set of stats when comparing frameworks as those at the top are simply
 better at using a process which is now not used greatly.
 
-This is where rww or real world wrk comes in, this benchmarker is built on top of [hyper's client api](https://github.com/hyperium/hyper) and brings with it many advantages and more realistic methods of benchmarking.
+This is where rewrk comes in, this benchmarker is built on top of [hyper's client api](https://github.com/hyperium/hyper) and brings with it many advantages and more realistic methods of benchmarking.
 
 ### Current features
 - Supports **both** HTTP/1 and HTTP/2.
@@ -45,15 +45,15 @@ Here's an example to produce the following benchmark:
 - on host `http://127.0.0.1:5000` (`-h http://127.0.0.1:5000`)<br>
 
 **CLI command:**<br>
-`rww -c 256 -t 12 -p 1 -d 15 -h http://127.0.0.1:5000`
+`rewrk -c 256 -t 12 -p 1 -d 15 -h http://127.0.0.1:5000`
 
 
 ## CLI Help
-To brind up the help menue simply run `rww --help` to produce this:
+To brind up the help menue simply run `rewrk --help` to produce this:
 
 ```
 USAGE:
-    rww [OPTIONS] --duration <duration> --host <host>
+    rewrk [OPTIONS] --duration <duration> --host <host>
 
 FLAGS:
         --help       Prints help information
