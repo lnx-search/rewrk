@@ -1,7 +1,8 @@
 use tokio::runtime::{Builder, Runtime};
 
 
-/// Creates and starts the runtime.
+/// Creates a tokio runtime with n amount of workers as specified by the
+/// parameters.
 pub fn get_rt(workers: usize) -> Runtime {
     Builder::new_multi_thread()
         .enable_all()

@@ -13,6 +13,18 @@ pub type Handle = JoinHandle<ClientResult>;
 pub type Handles = Vec<Handle>;
 
 
+/// Creates n amount of workers that all listen and work steal off the same
+/// async channel where n is the amount of concurrent connections wanted, all
+/// handles and then the signal sender are returned.
+///
+/// Connections:
+///     The amount of concurrent connections to spawn also known as the
+///     worker pool size.
+/// Host:
+///     The host string / url for each worker to connect to when it gets a
+///     signal to send a request.
+/// Http2:
+///     A bool to signal if the worker should use only HTTP/2 or HTTP/1.
 pub async fn create_pool(
     connections: usize,
     host: String,
@@ -34,6 +46,18 @@ pub async fn create_pool(
     (tx, handles)
 }
 
+
+/// A single connection worker
+///
+/// Builds a new http client with the http2_only option set either to true
+/// or false depending on the `http2` parameter.
+///
+/// It then waits for the signaller to start sending pings to queue requests,
+/// a client can take a request from the queue and then send the request,
+/// these times are then measured and compared against previous latencies
+/// to work out the min, max, total time and total requests of the given
+/// worker which can then be sent back to the controller when the handle
+/// is awaited.
 async fn client(
     waiter: Receiver<()>,
     host: String,
@@ -83,6 +107,7 @@ async fn client(
 }
 
 
+/// Constructs a new Request of a given host.
 fn get_request(host: &str) -> Request<Body> {
     Request::builder()
         .uri(host)
