@@ -1,10 +1,14 @@
 extern crate clap;
 use clap::{Arg, App, ArgMatches};
 use tokio::time::Duration;
+use regex::Regex;
 
 mod http;
 mod runtime;
 mod bench;
+
+
+static DURATION_MATCH: &str = "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
 
 
 fn main() {
@@ -51,13 +55,11 @@ fn main() {
         }
     };
 
-    let duration: u64 = match args
-        .value_of("duration")
-        .unwrap_or("1")
-        .parse() {
-        Ok(v) => v,
-        Err(_) => {
-            println!("Invalid parameter for 'duration' given, input type must be a integer.");
+    let duration: &str = args.value_of("duration").unwrap_or("1s");
+    let duration = match parse_duration(duration) {
+        Ok(dur) => dur,
+        Err(e) => {
+            eprintln!("{}", e);
             return;
         }
     };
@@ -67,18 +69,77 @@ fn main() {
         connections: conns,
         host: host.to_string(),
         http2,
-        duration: Duration::from_secs(duration)
+        duration
     };
 
     bench::start_benchmark(settings);
 }
 
 
+fn parse_duration(duration: &str) -> Result<Duration, String> {
+    let mut dur = Duration::default();
+
+    let re = Regex::new(DURATION_MATCH).unwrap();
+    for cap in re.captures_iter(duration) {
+        let add_to = if let Some(days) = cap.name("days") {
+            let days = days
+                .as_str()
+                .parse::<u64>()
+                .unwrap();
+
+            let seconds = days * 24 * 60 * 60;
+            Duration::from_secs(seconds)
+
+        } else if let Some(hours) = cap.name("hours") {
+            let hours = hours
+                .as_str()
+                .parse::<u64>()
+                .unwrap();
+
+            let seconds = hours * 60 * 60;
+            Duration::from_secs(seconds)
+
+        } else if let Some(minutes) = cap.name("minutes") {
+            let minutes = minutes
+                .as_str()
+                .parse::<u64>()
+                .unwrap();
+
+            let seconds = minutes * 60;
+            Duration::from_secs(seconds)
+
+        } else if let Some(seconds) = cap.name("seconds") {
+            let seconds = seconds
+                .as_str()
+                .parse::<u64>()
+                .unwrap();
+
+            Duration::from_secs(seconds)
+
+        } else {
+            return Err(format!("Invalid match: {:?}", cap))
+        };
+
+        dur += add_to
+    }
+
+
+    if dur.as_secs() <= 0 {
+        return Err(format!(
+            "Failed to extract any valid duration from {}",
+            duration
+        ))
+    }
+
+    Ok(dur)
+}
+
+
 fn parse_args() -> ArgMatches<'static> {
-    App::new("Real World Wrk")
+    App::new("ReWrk")
         .version("0.0.1")
         .author("Harrison Burt <hburt2003@gmail.com>")
-        .about("Benched frameworks")
+        .about("Benchmark HTTP/1 and HTTP/2 frameworks without pipelining bias.")
         .arg(
             Arg::with_name("threads")
                 .short("t")

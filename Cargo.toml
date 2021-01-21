@@ -12,3 +12,4 @@ hyper = { version = "0.14", features = ["full"] }
 clap = "2.33.3"
 async-channel = "1.5.1"
 colored = "2"
+regex = "1.4.*"

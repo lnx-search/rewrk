@@ -30,6 +30,13 @@ async fn run(settings: BenchmarkSettings) {
         settings.http2,
     ).await;
 
+    println!(
+        "Benchmarking {} connections @ {} for {}",
+        string(settings.connections).cyan(),
+        settings.host,
+        humanize(settings.duration),
+    );
+
     let start = Instant::now();
     while start.elapsed() < settings.duration {
         let _ = emitter.send(()).await;
@@ -73,12 +80,6 @@ async fn run(settings: BenchmarkSettings) {
 
 
     println!(
-        "Benchmarking {} connections @ {} for {}s",
-        string(settings.connections).cyan(),
-        settings.host,
-        settings.duration.as_secs(),
-    );
-    println!(
         "  Latencies:\n    \
         min    - {}ms\n    \
         max    - {}ms\n    \
@@ -99,4 +100,39 @@ async fn run(settings: BenchmarkSettings) {
 
 fn string<T: Display>(value: T) -> String {
     format!("{:.2}", value)
+}
+
+fn humanize(time: Duration) -> String {
+    let seconds = time.as_secs();
+
+    let (minutes, seconds) = div_mod(seconds, 60);
+    let (hours, minutes) = div_mod(minutes, 60);
+    let (days, hours) = div_mod(hours, 24);
+
+    let mut human = String::new();
+
+    if days != 0 {
+        human = format!("{} days, ", days);
+    };
+
+    if hours != 0 {
+        human = format!("{}{} hours, ", human, hours);
+    };
+
+    if minutes != 0 {
+        human = format!("{}{} minutes, ", human, minutes);
+    };
+
+    if seconds != 0 {
+        human = format!("{}{} seconds", human, seconds);
+    };
+
+    human
+}
+
+fn div_mod(main: u64, divider: u64) -> (u64, u64) {
+    let whole = main / divider;
+    let rem = main % divider;
+
+    (whole, rem)
 }
