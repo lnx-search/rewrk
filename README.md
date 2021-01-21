@@ -42,11 +42,11 @@ Here's an example to produce the following benchmark:
 - 256 connections (`-c 256`)
 - HTTP/1 only (`-p 1`)
 - 12 threads (`-t 12`)
-- 15 seconds (`-d 15`)
+- 15 seconds (`-d 15s`)
 - on host `http://127.0.0.1:5000` (`-h http://127.0.0.1:5000`)<br>
 
 **CLI command:**<br>
-`rewrk -c 256 -t 12 -p 1 -d 15 -h http://127.0.0.1:5000`
+`rewrk -c 256 -t 12 -p 1 -d 15s -h http://127.0.0.1:5000`
 
 
 ## CLI Help
