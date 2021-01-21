@@ -32,6 +32,7 @@ This is where rewrk comes in, this benchmarker is built on top of [hyper's clien
 - Arithmetic benchmark to simulate diffrent loads across clients.
 - State checking, making the frameworks and servers use all of their api rather than a minimised set.
 - JSON deserialization and validation benchmarks and checking.
+- Truly concurrent HTTP/2 benchmark.
 
 # Usage
 Usage is relatively simple, if you have a compiled binary simply run using the CLI.
