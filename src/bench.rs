@@ -1,8 +1,11 @@
 use std::time::Duration;
+use std::fmt::Display;
 use tokio::time::Instant;
+use colored::*;
 
 use crate::runtime;
 use crate::http;
+
 
 #[derive(Clone)]
 pub struct BenchmarkSettings {
@@ -12,6 +15,7 @@ pub struct BenchmarkSettings {
     pub http2: bool,
     pub duration: Duration,
 }
+
 
 pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
@@ -63,27 +67,36 @@ async fn run(settings: BenchmarkSettings) {
 
     let modified: f64 = 1000.0;
 
-    let mode = (max - min) * modified;
+    let median = (max - min) * modified;
     let max = max * modified;
     let min = min * modified;
 
 
     println!(
         "Benchmarking {} connections @ {} for {}s",
-        settings.connections,
+        string(settings.connections).blue(),
         settings.host,
         settings.duration.as_secs(),
     );
     println!(
-        "Latencies:\n  {:.2}ms min, {:.2}ms max, {:.2}ms mode",
-        min,
-        max,
-        mode,
+        "  Latencies:\n    \
+        min    - {}ms\n    \
+        max    - {}ms\n    \
+        median - {}ms",
+        string(min).green(),
+        string(max).red(),
+        string(median).yellow(),
     );
     println!(
-        "Requests:\n  {} requests in {:.2}s, {:.2} req/sec",
-        total_reqs,
-        time_taken,
-        (total_reqs as f64 / time_taken),
+        "  Requests:\n    \
+        Total Requests - {}\n    \
+        Requests/Sec   - {} ",
+        string(total_reqs).cyan(),
+        string(total_reqs as f64 / time_taken).cyan(),
     );
+}
+
+
+fn string<T: Display>(value: T) -> String {
+    format!("{:.2}", value)
 }
