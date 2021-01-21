@@ -7,22 +7,43 @@ use crate::runtime;
 use crate::http;
 
 
+/// The customisable settings that build the benchmark's behaviour.
 #[derive(Clone)]
 pub struct BenchmarkSettings {
+    /// The number of worker threads given to Tokio's runtime.
     pub threads: usize,
+
+    /// The amount of concurrent connections when connecting to the
+    /// framework.
     pub connections: usize,
+
+    /// The host connection / url.
     pub host: String,
+
+    /// HTTP/2 only (on/off).
     pub http2: bool,
+
+    /// The duration of the benchmark.
     pub duration: Duration,
 }
 
 
+/// Builds the runtime with the given settings and blocks on the main future.
 pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
     rt.block_on(run(settings))
 }
 
 
+/// Controls the benchmark itself.
+///
+/// A pool is created with a set of options that then wait for the
+/// channels to be filled with requests.
+///
+/// Once the duration has elapsed the handles are awaited and the results
+/// extracted from the handle.
+///
+/// The results are then merged into a single set of averages across workers.
 async fn run(settings: BenchmarkSettings) {
     let (emitter, handles) = http::create_pool(
         settings.connections,
@@ -98,10 +119,16 @@ async fn run(settings: BenchmarkSettings) {
 }
 
 
+/// Uber lazy way of just stringing everything and limiting it to 2 d.p
 fn string<T: Display>(value: T) -> String {
     format!("{:.2}", value)
 }
 
+/// Turns a fairly un-readable float in seconds / Duration into a human
+/// friendly string.
+///
+/// E.g.
+/// 10,000 seconds -> '2 hours, 46 minutes, 40 seconds'
 fn humanize(time: Duration) -> String {
     let seconds = time.as_secs();
 
@@ -130,6 +157,7 @@ fn humanize(time: Duration) -> String {
     human
 }
 
+/// Dirt simple div mod function.
 fn div_mod(main: u64, divider: u64) -> (u64, u64) {
     let whole = main / divider;
     let rem = main % divider;
