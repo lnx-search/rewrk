@@ -1,1 +1,4 @@
 /target
+/rewrk.exe
+/venv37
+/Cargo.lock
