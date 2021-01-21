@@ -63,8 +63,8 @@ OPTIONS:
     -c, --connections <connections>    Set the amount of concurrent e.g. '-c 512' [default: 1]
     -d, --duration <duration>          Set the duration of the benchmark in seconds.
     -h, --host <host>                  Set the host to bench e.g. '-h http://127.0.0.1:5050'
-    -p, --protocol <protocol>          Set the client to use http2 only. (default is http/1) e.g. '-protocol 1'
-                                       [default: 1]
+    -p, --protocol <protocol>          Set the client to use http2 only. (default is http/1) 
+                                       e.g. '-protocol 1' [default: 1]
     -t, --threads <threads>            Set the amount of threads to use e.g. '-t 12' [default: 1]
 ```
 
