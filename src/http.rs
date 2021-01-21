@@ -3,12 +3,10 @@ use async_channel::{Receiver, Sender};
 use std::time::Instant;
 
 use tokio::time::Duration;
-use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
 
 use hyper::{Body, Request, StatusCode};
-use hyper::client::conn::{Builder, SendRequest};
-use hyper::{Client, Uri};
+use hyper::Client;
 
 pub type ClientResult = Result<(Duration, Duration, usize, Duration), String>;
 pub type Handle = JoinHandle<ClientResult>;
@@ -41,7 +39,7 @@ async fn client(
     host: String,
     http2: bool,
 ) -> ClientResult {
-    let mut session = Client::builder()
+    let session = Client::builder()
         .http2_only(http2)
         .build_http();
 

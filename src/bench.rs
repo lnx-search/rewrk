@@ -22,7 +22,7 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 async fn run(settings: BenchmarkSettings) {
     let (emitter, handles) = http::create_pool(
         settings.connections,
-        settings.host,
+        settings.host.clone(),
         settings.http2,
     ).await;
 
@@ -55,16 +55,35 @@ async fn run(settings: BenchmarkSettings) {
         }
     }
 
-    let total_req: usize = total_request.iter().sum();
+    let total_reqs: usize = total_request.iter().sum();
     let max: f64 = total_max.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
     let min: f64 = total_min.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-    let avg_time: f64 = total_time.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
+    let time_taken: f64 = total_time.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
+
+
+    let modified: f64 = 1000.0;
+
+    let mode = (max - min) * modified;
+    let max = max * modified;
+    let min = min * modified;
+
+
     println!(
-        "{} total req, {:.4}ms max, {:.4}ms min, {:.4} avg time, {} Req/sec",
-        total_req,
-        max * 1000 as f64,
-        min * 1000 as f64,
-        avg_time,
-        total_req as f64 / avg_time,
-    )
+        "Benchmarking {} connections @ {} for {}s",
+        settings.connections,
+        settings.host,
+        settings.duration.as_secs(),
+    );
+    println!(
+        "Latencies:\n  {:.2}ms min, {:.2}ms max, {:.2}ms mode",
+        min,
+        max,
+        mode,
+    );
+    println!(
+        "Requests:\n  {} requests in {:.2}s, {:.2} req/sec",
+        total_reqs,
+        time_taken,
+        (total_reqs as f64 / time_taken),
+    );
 }
