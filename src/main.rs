@@ -8,9 +8,14 @@ mod runtime;
 mod bench;
 
 
+/// Matches a string like '12d 24h 5m 45s' to a regex capture.
 static DURATION_MATCH: &str = "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
 
 
+/// ReWrk
+///
+/// Captures CLI arguments and build benchmarking settings and runtime to
+/// suite the arguments and options.
 fn main() {
     let args = parse_args();
 
@@ -76,6 +81,11 @@ fn main() {
 }
 
 
+/// Parses a duration string from the CLI to a Duration.
+/// '11d 3h 32m 4s' -> Duration
+///
+/// If no matches are found for the string or a invalid match
+/// is captured a error message returned and displayed.
 fn parse_duration(duration: &str) -> Result<Duration, String> {
     let mut dur = Duration::default();
 
@@ -135,6 +145,23 @@ fn parse_duration(duration: &str) -> Result<Duration, String> {
 }
 
 
+/// Contains Clap's app setup.
+///
+/// Duration:
+///     Benchmark HTTP/1 and HTTP/2 frameworks without pipelining bias.
+///
+/// Options:
+///     threads (t):
+///         Set the amount of threads to use e.g. '-t 12'
+///     connections (c):
+///         Set the amount of concurrent e.g. '-c 512'
+///     host (h):
+///         Set the host to bench e.g. '-h http://127.0.0.1:5050'
+///     protocol (p):
+///         Set the client to use http2 only. (default is http/1)
+///         e.g. '-protocol 1'
+///     duration (d):
+///         Set the duration of the benchmark.
 fn parse_args() -> ArgMatches<'static> {
     App::new("ReWrk")
         .version("0.0.1")
@@ -172,7 +199,7 @@ fn parse_args() -> ArgMatches<'static> {
             Arg::with_name("duration")
                 .short("d")
                 .long("duration")
-                .help("Set the duration of the benchmark in seconds.")
+                .help("Set the duration of the benchmark.")
                 .takes_value(true)
                 .required(true)
         ).get_matches()
