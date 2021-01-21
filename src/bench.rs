@@ -67,7 +67,7 @@ async fn run(settings: BenchmarkSettings) {
 
     let modified: f64 = 1000.0;
 
-    let median = (max - min) * modified;
+    let median = ((max - min) / 2.0) * modified;
     let max = max * modified;
     let min = min * modified;
 
