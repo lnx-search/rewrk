@@ -1,6 +1,19 @@
 # rww
 A more modern http framework benchmarker.
 
+```
+F:\rww> rww -h http://127.0.0.1:5000 -c 60 -t 12 -d 5
+
+Benchmarking 60 connections @ http://127.0.0.1:5000 for 5s
+  Latencies:
+    min    - 2.07ms
+    max    - 125.26ms
+    median - 61.60ms
+  Requests:
+    Total Requests - 64410
+    Requests/Sec   - 12836.17
+```
+
 # Motivation
 The motivation behind this project extends from developers tunnel visioning on benchmarks like [techempower](https://www.techempower.com/benchmarks/) that use the benchmarking tool called [wrk](https://github.com/wg/wrk).
 
