@@ -120,7 +120,7 @@ impl WorkerResult {
     /// this is needed before calculating the Pn percentiles, this must be
     /// manually ran to same some compute time.
     pub fn sort_request_times(&mut self) {
-        self.request_times.sort();
+        self.request_times.sort_by(|a, b| b.partial_cmp(a).unwrap());
     }
 
     /// Works out the average latency of the 99.9 percentile.
