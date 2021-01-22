@@ -91,7 +91,8 @@ async fn run(settings: BenchmarkSettings) {
         }
     }
 
-    combiner.sort_request_times();
+    combiner.display_latencies();
+    combiner.display_requests();
 
     if settings.display_percentile {
         combiner.display_percentile_table();

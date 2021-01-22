@@ -96,13 +96,13 @@ impl WorkerResult {
     /// Calculates the variance between all requests
     pub fn variance(&self) -> f64 {
         let mean = self.avg_request_latency().as_secs_f64();
-        let variance: f64 = self.request_times
+        let sum_delta: f64 = self.request_times
             .iter()
             .map(|dur| {
                 let time = dur.as_secs_f64();
                 let delta = time - mean;
 
-                delta ** 2
+                delta.powi(2)
             })
             .sum();
 
@@ -112,7 +112,7 @@ impl WorkerResult {
     /// Calculates the standard deviation of request latency.
     pub fn std_deviation_request_latency(&self) -> f64 {
         let diff = self.variance();
-        diff ** 0.5
+        diff.powf(0.5)
     }
 
     /// Sorts the list of times.
@@ -223,6 +223,42 @@ impl WorkerResult {
         let avg = total / p50.len() as f64;
 
         Duration::from_secs_f64(avg)
+    }
+
+    pub fn display_latencies(&mut self) {
+        let modified = 1000 as f64;
+        let avg = self.avg_request_latency().as_secs_f64() * modified;
+        let max = self.max_request_latency().as_secs_f64() * modified;
+        let min = self.min_request_latency().as_secs_f64() * modified;
+        let std_deviation = self.std_deviation_request_latency() * modified;
+
+        println!("  Latencies:");
+        println!(
+            "    {:<7}  {:<7}  {:<7}  {:<7}  ",
+            "Avg".bright_yellow(),
+            "Stdev".bright_magenta(),
+            "Min".bright_green(),
+            "Max".bright_red(),
+        );
+        println!(
+            "    {:<7}  {:<7}  {:<7}  {:<7}  ",
+            format!("{:.2}ms", avg),
+            format!("{:.2}ms", std_deviation),
+            format!("{:.2}ms", min),
+            format!("{:.2}ms", max),
+        );
+    }
+
+    pub fn display_requests(&mut self) {
+        let total = self.total_requests();
+        let avg = self.avg_request_per_sec();
+
+        println!("  Requests:");
+        println!(
+            "    Total: {:^7} Req/Sec: {:^7}",
+            format!("{}", total).as_str().bright_cyan(),
+            format!("{:.2}", avg).as_str().bright_cyan()
+        )
     }
 
     pub fn display_percentile_table(&mut self) {
