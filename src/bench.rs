@@ -45,10 +45,13 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 ///
 /// The results are then merged into a single set of averages across workers.
 async fn run(settings: BenchmarkSettings) {
+    let predict_size = settings.duration.as_secs() * 10_000;
+
     let (emitter, handles) = http::create_pool(
         settings.connections,
         settings.host.clone(),
         settings.http2,
+        predict_size as usize,
     ).await;
 
     println!(
@@ -79,6 +82,9 @@ async fn run(settings: BenchmarkSettings) {
 
         if let Ok(stats) = result {
             handle_results.push(stats);
+        } else if let Err(e) = result {
+            eprintln!("{}", e);
+            return;
         }
     }
 }

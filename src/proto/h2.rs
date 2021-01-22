@@ -1,9 +1,8 @@
-use async_channel::{Receiver, Sender};
+use async_channel::Receiver;
 
 use std::time::Instant;
 
 use tokio::time::Duration;
-use tokio::task::JoinHandle;
 
 use hyper::{Body, Request, StatusCode};
 use hyper::Client;
@@ -26,50 +25,39 @@ use crate::results::WorkerResult;
 pub async fn client(
     waiter: Receiver<()>,
     host: String,
+    predicted_size: usize,
 ) -> Result<WorkerResult, String> {
     let session = Client::builder()
         .http2_only(true)
         .build_http();
 
-    let mut max_latency: Duration = Duration::default();  // in seconds
-    let mut min_latency: Duration = Duration::default();  // in seconds
-    let mut has_been_set: bool = false;
-
-    let mut total_requests: usize = 0;
+    let mut times: Vec<Duration> = Vec::with_capacity(predicted_size);
 
     let start = Instant::now();
     while let Ok(_) = waiter.recv().await {
         let req = get_request(&host);
 
         let ts = Instant::now();
-
         let re = session.request(req).await;
-        if let Err(e) = &re {
-            println!("{:?}", e);
-        };
+        let took = ts.elapsed();
 
-        if let Ok(r) = re {
+        if let Err(e) = &re {
+            return Err(format!("{:?}", e));
+        } else if let Ok(r) = re {
             assert_eq!(r.status(), StatusCode::OK);
         }
 
-        let took = ts.elapsed();
+        times.push(took);
 
-        max_latency = max_latency.max(took);
-
-        min_latency = if has_been_set {
-            min_latency.min(took)
-        } else {
-            has_been_set = true;
-            took
-        };
-
-        total_requests += 1;
     }
     let time_taken = start.elapsed();
 
-    // Ok((max_latency, min_latency, total_requests, time_taken))
+    let result = WorkerResult{
+        total_time: time_taken,
+        request_times: times,
+    };
 
-    Ok(WorkerResult{})
+    Ok(result)
 }
 
 

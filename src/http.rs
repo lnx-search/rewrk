@@ -1,12 +1,6 @@
 use async_channel::{Receiver, Sender};
 
-use std::time::Instant;
-
-use tokio::time::Duration;
 use tokio::task::JoinHandle;
-
-use hyper::{Body, Request, StatusCode};
-use hyper::Client;
 
 use crate::proto::{h1, h2};
 use crate::results::WorkerResult;
@@ -30,15 +24,16 @@ pub type Handles = Vec<Handle>;
 pub async fn create_pool(
     connections: usize,
     host: String,
-    http2: bool
+    http2: bool,
+    predicted_size: usize,
 ) -> (Sender<()>, Handles) {
 
     let (tx, rx) = async_channel::bounded::<()>(connections * 2);
 
     let handles = if http2 {
-        start_h2(connections, host, rx).await
+        start_h2(connections, host, rx, predicted_size).await
     } else {
-        start_h1(connections, host, rx).await
+        start_h1(connections, host, rx, predicted_size).await
     };
 
     (tx, handles)
@@ -49,12 +44,14 @@ async fn start_h1(
     connections: usize,
     host: String,
     poller: Receiver<()>,
+    predicted_size: usize,
 ) -> Handles {
     let mut handles: Handles = Vec::with_capacity(connections);
     for _ in 0..connections {
         let handle: Handle = tokio::spawn(h1::client(
             poller.clone(),
             host.clone(),
+            predicted_size,
         ));
         handles.push(handle);
     }
@@ -67,12 +64,14 @@ async fn start_h2(
     connections: usize,
     host: String,
     poller: Receiver<()>,
+    predicted_size: usize,
 ) -> Handles {
     let mut handles: Handles = Vec::with_capacity(connections);
     for _ in 0..connections {
         let handle: Handle = tokio::spawn(h2::client(
             poller.clone(),
             host.clone(),
+            predicted_size,
         ));
         handles.push(handle);
     }
