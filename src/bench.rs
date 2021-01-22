@@ -60,16 +60,14 @@ async fn run(settings: BenchmarkSettings) {
 
     let start = Instant::now();
     while start.elapsed() < settings.duration {
-        let _ = emitter.send(()).await;
+        if let Err(_) = emitter.send(()).await {
+            break;
+        };
     }
     drop(emitter);
 
 
-    let mut total_request = Vec::new();
-    let mut total_max = Vec::new();
-    let mut total_min = Vec::new();
-    let mut total_time = Vec::new();
-
+    let mut handle_results = Vec::with_capacity(settings.connections);
     for handle in handles {
         let result = match handle.await {
             Ok(r) => r,
@@ -79,43 +77,10 @@ async fn run(settings: BenchmarkSettings) {
             }
         };
 
-        if let Ok((max, min, total, time)) = result {
-            total_max.push(max);
-            total_min.push(min);
-            total_request.push(total);
-            total_time.push(time);
+        if let Ok(stats) = result {
+            handle_results.push(stats);
         }
     }
-
-    let total_reqs: usize = total_request.iter().sum();
-    let max: f64 = total_max.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-    let min: f64 = total_min.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-    let time_taken: f64 = total_time.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-
-
-    let modified: f64 = 1000.0;
-
-    let median = ((max - min) / 2.0) * modified;
-    let max = max * modified;
-    let min = min * modified;
-
-
-    println!(
-        "  Latencies:\n    \
-        min    - {}ms\n    \
-        max    - {}ms\n    \
-        median - {}ms",
-        string(min).green(),
-        string(max).red(),
-        string(median).yellow(),
-    );
-    println!(
-        "  Requests:\n    \
-        Total Requests - {}\n    \
-        Requests/Sec   - {} ",
-        string(total_reqs).cyan(),
-        string(total_reqs as f64 / time_taken).cyan(),
-    );
 }
 
 
@@ -164,3 +129,37 @@ fn div_mod(main: u64, divider: u64) -> (u64, u64) {
 
     (whole, rem)
 }
+
+
+    /* todo hold onto
+    let total_reqs: usize = total_request.iter().sum();
+    let max: f64 = total_max.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
+    let min: f64 = total_min.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
+    let time_taken: f64 = total_time.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
+
+
+    let modified: f64 = 1000.0;
+
+    let median = ((max - min) / 2.0) * modified;
+    let max = max * modified;
+    let min = min * modified;
+
+
+    println!(
+        "  Latencies:\n    \
+        min    - {}ms\n    \
+        max    - {}ms\n    \
+        median - {}ms",
+        string(min).green(),
+        string(max).red(),
+        string(median).yellow(),
+    );
+    println!(
+        "  Requests:\n    \
+        Total Requests - {}\n    \
+        Requests/Sec   - {} ",
+        string(total_reqs).cyan(),
+        string(total_reqs as f64 / time_taken).cyan(),
+    );
+    */
+

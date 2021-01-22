@@ -6,6 +6,8 @@ use regex::Regex;
 mod http;
 mod runtime;
 mod bench;
+mod proto;
+mod results;
 
 
 /// Matches a string like '12d 24h 5m 45s' to a regex capture.
