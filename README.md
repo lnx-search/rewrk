@@ -2,14 +2,15 @@
 A more modern http framework benchmarker.
 
 ```
-F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 1s
+F:\rewrk> rewrk -h http://127.0.0.1:5000 -t 12 -c 60 -d 1s
 
 Benchmarking 60 connections @ http://127.0.0.1:5000 for 1 seconds
   Latencies:
     Avg      Stdev    Min      Max    
-    4.37ms   2.65ms   1.34ms   49.13ms
+    5.15ms   2.32ms   1.30ms   29.95ms
   Requests:
-    Total:  13847  Req/Sec: 13702.17
+    Total:  11705  Req/Sec: 11573.09
+
 ```
 
 *With optional --pct flag*
@@ -17,12 +18,12 @@ Benchmarking 60 connections @ http://127.0.0.1:5000 for 1 seconds
 + --------------- + --------------- +
 |   Percentile    |   Avg Latency   |
 + --------------- + --------------- +
-|      99.9%      |     1.88ms      |
-|       99%       |     2.30ms      |
-|       95%       |     2.65ms      |
-|       90%       |     2.86ms      |
-|       75%       |     3.19ms      |
-|       50%       |     3.50ms      |
+|      99.9%      |     26.46ms     |
+|       99%       |     21.06ms     |
+|       95%       |     12.78ms     |
+|       90%       |     10.22ms     |
+|       75%       |     7.73ms      |
+|       50%       |     6.38ms      |
 + --------------- + --------------- +
 ```
 

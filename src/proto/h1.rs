@@ -4,10 +4,11 @@ use std::time::Instant;
 
 use tokio::time::Duration;
 
-use hyper::{Body, Request, StatusCode};
+use hyper::StatusCode;
 use hyper::Client;
 
 use crate::results::WorkerResult;
+use crate::utils::get_request;
 
 
 /// A single http/1 connection worker
@@ -30,6 +31,7 @@ pub async fn client(
         .build_http();
 
     let mut times: Vec<Duration> = Vec::with_capacity(predicted_size);
+    let mut buffer_counter: usize = 0;
 
     let start = Instant::now();
     while let Ok(_) = waiter.recv().await {
@@ -40,9 +42,19 @@ pub async fn client(
         let took = ts.elapsed();
 
         if let Err(e) = &re {
-            println!("{:?}", e);
+            return Err(format!("{:?}", e));
         } else if let Ok(r) = re {
-            assert_eq!(r.status(), StatusCode::OK);
+            let status = r.status();
+            assert_eq!(status, StatusCode::OK);
+
+            let buff = match hyper::body::to_bytes(r).await {
+                Ok(buff) => buff,
+                Err(e) => return Err(format!(
+                    "Failed to read stream {:?}",
+                     e
+                ))
+            };
+            buffer_counter += buff.len();
         }
 
         times.push(took);
@@ -53,18 +65,10 @@ pub async fn client(
     let result = WorkerResult{
         total_times: vec![time_taken],
         request_times: times,
+        buffer_sizes: vec![buffer_counter]
     };
 
     Ok(result)
 }
 
 
-/// Constructs a new Request of a given host.
-fn get_request(host: &str) -> Request<Body> {
-    Request::builder()
-        .uri(host)
-        .header("Host", host)
-        .method("GET")
-        .body(Body::from(""))
-        .expect("Failed to build request")
-}

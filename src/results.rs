@@ -2,6 +2,7 @@
 
 use tokio::time::Duration;
 use colored::Colorize;
+use crate::utils::format_data;
 
 
 /// Contains and handles results from the workers
@@ -11,6 +12,9 @@ pub struct WorkerResult {
 
     /// The vec of latencies per request stored.
     pub request_times: Vec<Duration>,
+
+    /// The amount of data read from each worker.
+    pub buffer_sizes: Vec<usize>,
 }
 
 impl WorkerResult {
@@ -19,7 +23,8 @@ impl WorkerResult {
     pub fn default() -> Self {
         Self {
             total_times: vec![],
-            request_times: vec![]
+            request_times: vec![],
+            buffer_sizes: vec![]
         }
     }
 
@@ -27,6 +32,7 @@ impl WorkerResult {
     pub fn combine(mut self, other: Self) -> Self {
         self.request_times.extend(other.request_times);
         self.total_times.extend(other.total_times);
+        self.buffer_sizes.extend(other.buffer_sizes);
 
         self
     }
@@ -34,6 +40,16 @@ impl WorkerResult {
     /// Simple helper returning the amount of requests overall.
     pub fn total_requests(&self) -> usize {
         self.request_times.len()
+    }
+
+    /// Calculates the total transfer in bytes.
+    pub fn total_transfer(&self) -> usize {
+        self.buffer_sizes.iter().sum()
+    }
+
+    /// Calculates the total transfer in bytes.
+    pub fn avg_transfer(&self) -> f64 {
+        self.total_transfer() as f64 / self.avg_total_time().as_secs_f64()
     }
 
     /// Calculates the requests per second average.
@@ -261,6 +277,21 @@ impl WorkerResult {
         )
     }
 
+    pub fn display_transfer(&mut self) {
+        let total = self.total_transfer() as f64;
+        let rate = self.avg_transfer();
+
+        let display_total = format_data(total as f64);
+        let display_rate = format_data(rate);
+
+        println!("  Transfer:");
+        println!(
+            "    Total: {:^7} Transfer Rate: {:^7}",
+            format!("{}", display_total).as_str().bright_cyan(),
+            format!("{}/Sec", display_rate).as_str().bright_cyan()
+        )
+    }
+
     pub fn display_percentile_table(&mut self) {
         self.sort_request_times();
 
@@ -305,3 +336,4 @@ impl WorkerResult {
         println!("+ {:-^15} + {:-^15} +", "", "",);
     }
 }
+

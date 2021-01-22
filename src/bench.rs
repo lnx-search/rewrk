@@ -6,6 +6,7 @@ use colored::*;
 use crate::runtime;
 use crate::http;
 use crate::results::WorkerResult;
+use crate::utils::div_mod;
 
 
 /// The customisable settings that build the benchmark's behaviour.
@@ -139,12 +140,4 @@ fn humanize(time: Duration) -> String {
     human
 }
 
-
-/// Dirt simple div mod function.
-fn div_mod(main: u64, divider: u64) -> (u64, u64) {
-    let whole = main / divider;
-    let rem = main % divider;
-
-    (whole, rem)
-}
 
