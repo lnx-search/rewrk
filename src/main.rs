@@ -142,22 +142,6 @@ fn parse_duration(duration: &str) -> Result<Duration, String> {
 
 
 /// Contains Clap's app setup.
-///
-/// Duration:
-///     Benchmark HTTP/1 and HTTP/2 frameworks without pipelining bias.
-///
-/// Options:
-///     threads (t):
-///         Set the amount of threads to use e.g. '-t 12'
-///     connections (c):
-///         Set the amount of concurrent e.g. '-c 512'
-///     host (h):
-///         Set the host to bench e.g. '-h http://127.0.0.1:5050'
-///     protocol (p):
-///         Set the client to use http2 only. (default is http/1)
-///         e.g. '-protocol 1'
-///     duration (d):
-///         Set the duration of the benchmark.
 fn parse_args() -> ArgMatches<'static> {
     App::new("ReWrk")
         .version("0.1.2")
