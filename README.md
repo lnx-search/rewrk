@@ -2,16 +2,28 @@
 A more modern http framework benchmarker.
 
 ```
-F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 5s
+F:\rewrk> rewrk -h http://127.0.0.1:5000 -c 60 -t 12 -d 1s
 
-Benchmarking 60 connections @ http://127.0.0.1:5000 for 5s
+Benchmarking 60 connections @ http://127.0.0.1:5000 for 1 seconds
   Latencies:
-    min    - 2.07ms
-    max    - 125.26ms
-    median - 61.60ms
+    Avg      Stdev    Min      Max    
+    4.37ms   2.65ms   1.34ms   49.13ms
   Requests:
-    Total Requests - 64410
-    Requests/Sec   - 12836.17
+    Total:  13847  Req/Sec: 13702.17
+```
+
+*With optional --pct flag*
+```
++ --------------- + --------------- +
+|   Percentile    |   Avg Latency   |
++ --------------- + --------------- +
+|      99.9%      |     1.88ms      |
+|       99%       |     2.30ms      |
+|       95%       |     2.65ms      |
+|       90%       |     2.86ms      |
+|       75%       |     3.19ms      |
+|       50%       |     3.50ms      |
++ --------------- + --------------- +
 ```
 
 # Motivation
@@ -40,32 +52,33 @@ Usage is relatively simple, if you have a compiled binary simply run using the C
 ## Example
 Here's an example to produce the following benchmark:
 - 256 connections (`-c 256`)
-- HTTP/1 only (`-p 1`)
+- HTTP/2 only (`--http2`)
 - 12 threads (`-t 12`)
 - 15 seconds (`-d 15s`)
+- with percentile table (`--pct`)
 - on host `http://127.0.0.1:5000` (`-h http://127.0.0.1:5000`)<br>
 
 **CLI command:**<br>
-`rewrk -c 256 -t 12 -p 1 -d 15s -h http://127.0.0.1:5000`
+`rewrk -c 256 -t 12 -d 15s -h http://127.0.0.1:5000 --http2 --pct`
 
 
 ## CLI Help
-To brind up the help menue simply run `rewrk --help` to produce this:
+To bring up the help menu simply run `rewrk --help` to produce this:
 
 ```
 USAGE:
-    rewrk [OPTIONS] --duration <duration> --host <host>
+    rewrk.exe [FLAGS] [OPTIONS] --duration <duration> --host <host>
 
 FLAGS:
         --help       Prints help information
+        --http2      Set the client to use http2 only. (default is http/1) e.g. '--http2'
+        --pct        Displays the percentile table after benchmarking.
     -V, --version    Prints version information
 
 OPTIONS:
     -c, --connections <connections>    Set the amount of concurrent e.g. '-c 512' [default: 1]
-    -d, --duration <duration>          Set the duration of the benchmark, e.g. "14d 11h 6m 5s".
+    -d, --duration <duration>          Set the duration of the benchmark.
     -h, --host <host>                  Set the host to bench e.g. '-h http://127.0.0.1:5050'
-    -p, --protocol <protocol>          Set the client to use http2 only. (default is http/1) 
-                                       e.g. '-protocol 1' [default: 1]
     -t, --threads <threads>            Set the amount of threads to use e.g. '-t 12' [default: 1]
 ```
 
