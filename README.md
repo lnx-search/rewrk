@@ -1,16 +1,17 @@
 # rewrk
-A more modern http framework benchmarker.
+A more modern http framework benchmark utility.
 
 ```
-F:\rewrk> rewrk -h http://127.0.0.1:5000 -t 12 -c 60 -d 1s
+F:\rewrk> rewrk -h http://127.0.0.1:5000 -t 12 -c 60 -d 5s
 
-Benchmarking 60 connections @ http://127.0.0.1:5000 for 1 seconds
+Benchmarking 60 connections @ http://127.0.0.1:5000 for 5 seconds
   Latencies:
     Avg      Stdev    Min      Max    
-    5.15ms   2.32ms   1.30ms   29.95ms
+    3.27ms   0.40ms   1.95ms   9.39ms
   Requests:
-    Total:  11705  Req/Sec: 11573.09
-
+    Total:  91281  Req/Sec: 18227.81
+  Transfer:
+    Total: 1.13 MB Transfer Rate: 231.41 KB/Sec
 ```
 
 *With optional --pct flag*
@@ -18,12 +19,12 @@ Benchmarking 60 connections @ http://127.0.0.1:5000 for 1 seconds
 + --------------- + --------------- +
 |   Percentile    |   Avg Latency   |
 + --------------- + --------------- +
-|      99.9%      |     26.46ms     |
-|       99%       |     21.06ms     |
-|       95%       |     12.78ms     |
-|       90%       |     10.22ms     |
-|       75%       |     7.73ms      |
-|       50%       |     6.38ms      |
+|      99.9%      |     6.88ms      |
+|       99%       |     5.62ms      |
+|       95%       |     4.62ms      |
+|       90%       |     4.24ms      |
+|       75%       |     3.78ms      |
+|       50%       |     3.49ms      |
 + --------------- + --------------- +
 ```
 
