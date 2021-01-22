@@ -93,6 +93,28 @@ impl WorkerResult {
         min
     }
 
+    /// Calculates the variance between all requests
+    pub fn variance(&self) -> f64 {
+        let mean = self.avg_request_latency().as_secs_f64();
+        let variance: f64 = self.request_times
+            .iter()
+            .map(|dur| {
+                let time = dur.as_secs_f64();
+                let delta = time - mean;
+
+                delta ** 2
+            })
+            .sum();
+
+        sum_delta / self.total_requests() as f64
+    }
+
+    /// Calculates the standard deviation of request latency.
+    pub fn std_deviation_request_latency(&self) -> f64 {
+        let diff = self.variance();
+        diff ** 0.5
+    }
+
     /// Sorts the list of times.
     ///
     /// this is needed before calculating the Pn percentiles, this must be
