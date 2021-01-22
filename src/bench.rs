@@ -5,6 +5,7 @@ use colored::*;
 
 use crate::runtime;
 use crate::http;
+use crate::results::WorkerResult;
 
 
 /// The customisable settings that build the benchmark's behaviour.
@@ -70,7 +71,7 @@ async fn run(settings: BenchmarkSettings) {
     drop(emitter);
 
 
-    let mut handle_results = Vec::with_capacity(settings.connections);
+    let mut combiner = WorkerResult::default();
     for handle in handles {
         let result = match handle.await {
             Ok(r) => r,
@@ -81,7 +82,7 @@ async fn run(settings: BenchmarkSettings) {
         };
 
         if let Ok(stats) = result {
-            handle_results.push(stats);
+            combiner = combiner.combine(stats);
         } else if let Err(e) = result {
             eprintln!("{}", e);
             return;
