@@ -160,7 +160,7 @@ fn parse_duration(duration: &str) -> Result<Duration, String> {
 ///         Set the duration of the benchmark.
 fn parse_args() -> ArgMatches<'static> {
     App::new("ReWrk")
-        .version("0.0.1")
+        .version("0.1.2")
         .author("Harrison Burt <hburt2003@gmail.com>")
         .about("Benchmark HTTP/1 and HTTP/2 frameworks without pipelining bias.")
         .arg(
