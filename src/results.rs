@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use tokio::time::Duration;
+use colored::Colorize;
 
 
 /// Contains and handles results from the workers
@@ -24,8 +25,8 @@ impl WorkerResult {
 
     /// Consumes both self and other producing a combined result.
     pub fn combine(mut self, other: Self) -> Self {
-        self.request_times.extend(other.total_times);
-        self.total_times.extend(other.request_times);
+        self.request_times.extend(other.request_times);
+        self.total_times.extend(other.total_times);
 
         self
     }
@@ -33,6 +34,14 @@ impl WorkerResult {
     /// Simple helper returning the amount of requests overall.
     pub fn total_requests(&self) -> usize {
         self.request_times.len()
+    }
+
+    /// Calculates the requests per second average.
+    pub fn avg_request_per_sec(&self) -> f64 {
+        let amount = self.request_times.len() as f64;
+        let avg_time = self.avg_total_time();
+
+        amount / avg_time.as_secs_f64()
     }
 
     /// Calculates the average time per worker overall as a `Duration`
@@ -77,7 +86,7 @@ impl WorkerResult {
        let min = self.request_times
            .iter()
            .map(|dur| dur)
-           .max()
+           .min()
            .map(|res| *res)
            .unwrap_or(Duration::default());
 
@@ -92,17 +101,36 @@ impl WorkerResult {
         self.request_times.sort();
     }
 
+    /// Works out the average latency of the 99.9 percentile.
+    pub fn p999_avg_latency(&self) -> Duration {
+        let len = self.request_times.len() as f64 * 0.001;
+        let p999 = self.request_times
+            .chunks(len as usize)
+            .next()
+            .expect("Failed to calculate P99.9 avg latency");
+
+        let total: f64 = p999.iter()
+            .map(|dur| dur.as_secs_f64())
+            .sum();
+
+        let avg = total / p999.len() as f64;
+
+        Duration::from_secs_f64(avg)
+    }
+
     /// Works out the average latency of the 99 percentile.
     pub fn p99_avg_latency(&self) -> Duration {
         let len = self.request_times.len() as f64 * 0.01;
         let p99 = self.request_times
             .chunks(len as usize)
             .next()
-            .expect("Failed to calculate P50 avg latency");
+            .expect("Failed to calculate P99 avg latency");
 
-        let avg: f64 = p99.iter()
+        let total: f64 = p99.iter()
             .map(|dur| dur.as_secs_f64())
             .sum();
+
+        let avg = total / p99.len() as f64;
 
         Duration::from_secs_f64(avg)
     }
@@ -113,11 +141,13 @@ impl WorkerResult {
         let p95 = self.request_times
             .chunks(len as usize)
             .next()
-            .expect("Failed to calculate P50 avg latency");
+            .expect("Failed to calculate P95 avg latency");
 
-        let avg: f64 = p95.iter()
+        let total: f64 = p95.iter()
             .map(|dur| dur.as_secs_f64())
             .sum();
+
+        let avg = total / p95.len() as f64;
 
         Duration::from_secs_f64(avg)
     }
@@ -128,11 +158,13 @@ impl WorkerResult {
         let p90 = self.request_times
             .chunks(len as usize)
             .next()
-            .expect("Failed to calculate P50 avg latency");
+            .expect("Failed to calculate P90 avg latency");
 
-        let avg: f64 = p90.iter()
+        let total: f64 = p90.iter()
             .map(|dur| dur.as_secs_f64())
             .sum();
+
+        let avg = total / p90.len() as f64;
 
         Duration::from_secs_f64(avg)
     }
@@ -143,11 +175,13 @@ impl WorkerResult {
         let p75 = self.request_times
             .chunks(len as usize)
             .next()
-            .expect("Failed to calculate P50 avg latency");
+            .expect("Failed to calculate P75 avg latency");
 
-        let avg: f64 = p75.iter()
+        let total: f64 = p75.iter()
             .map(|dur| dur.as_secs_f64())
             .sum();
+
+        let avg = total / p75.len() as f64;
 
         Duration::from_secs_f64(avg)
     }
@@ -160,10 +194,56 @@ impl WorkerResult {
             .next()
             .expect("Failed to calculate P50 avg latency");
 
-        let avg: f64 = p50.iter()
+        let total: f64 = p50.iter()
             .map(|dur| dur.as_secs_f64())
             .sum();
 
+        let avg = total / p50.len() as f64;
+
         Duration::from_secs_f64(avg)
+    }
+
+    pub fn display_percentile_table(&mut self) {
+        self.sort_request_times();
+
+        println!("+ {:-^15} + {:-^15} +", "", "",);
+
+        println!(
+            "| {:^15} | {:^15} |",
+            "Percentile".bright_cyan(),
+            "Avg Latency".bright_yellow(),
+            // "Min".bright_green(),
+            // "Max".bright_red(),
+        );
+
+        println!("+ {:-^15} + {:-^15} +", "", "",);
+
+        let modifier = 1000 as f64;
+        println!(
+            "| {:^15} | {:^15} |", "99.9%",
+            format!("{:.2}ms", self.p999_avg_latency().as_secs_f64()  * modifier)
+        );
+        println!(
+            "| {:^15} | {:^15} |", "99%",
+            format!("{:.2}ms", self.p99_avg_latency().as_secs_f64()  * modifier)
+        );
+        println!(
+            "| {:^15} | {:^15} |", "95%",
+            format!("{:.2}ms", self.p95_avg_latency().as_secs_f64()  * modifier)
+        );
+        println!(
+            "| {:^15} | {:^15} |", "90%",
+            format!("{:.2}ms", self.p90_avg_latency().as_secs_f64()  * modifier)
+        );;
+        println!(
+            "| {:^15} | {:^15} |", "75%",
+            format!("{:.2}ms", self.p75_avg_latency().as_secs_f64()  * modifier)
+        );
+        println!(
+            "| {:^15} | {:^15} |", "50%",
+            format!("{:.2}ms", self.p50_avg_latency().as_secs_f64()  * modifier)
+        );
+
+        println!("+ {:-^15} + {:-^15} +", "", "",);
     }
 }

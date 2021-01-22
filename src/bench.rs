@@ -9,7 +9,7 @@ use crate::results::WorkerResult;
 
 
 /// The customisable settings that build the benchmark's behaviour.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BenchmarkSettings {
     /// The number of worker threads given to Tokio's runtime.
     pub threads: usize,
@@ -26,6 +26,8 @@ pub struct BenchmarkSettings {
 
     /// The duration of the benchmark.
     pub duration: Duration,
+
+    pub display_percentile: bool,
 }
 
 
@@ -88,6 +90,12 @@ async fn run(settings: BenchmarkSettings) {
             return;
         }
     }
+
+    combiner.sort_request_times();
+
+    if settings.display_percentile {
+        combiner.display_percentile_table();
+    }
 }
 
 
@@ -95,6 +103,7 @@ async fn run(settings: BenchmarkSettings) {
 fn string<T: Display>(value: T) -> String {
     format!("{:.2}", value)
 }
+
 
 /// Turns a fairly un-readable float in seconds / Duration into a human
 /// friendly string.
@@ -129,6 +138,7 @@ fn humanize(time: Duration) -> String {
     human
 }
 
+
 /// Dirt simple div mod function.
 fn div_mod(main: u64, divider: u64) -> (u64, u64) {
     let whole = main / divider;
@@ -136,37 +146,4 @@ fn div_mod(main: u64, divider: u64) -> (u64, u64) {
 
     (whole, rem)
 }
-
-
-    /* todo hold onto
-    let total_reqs: usize = total_request.iter().sum();
-    let max: f64 = total_max.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-    let min: f64 = total_min.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-    let time_taken: f64 = total_time.iter().map(|v| v.as_secs_f64()).sum::<f64>() / settings.connections as f64;
-
-
-    let modified: f64 = 1000.0;
-
-    let median = ((max - min) / 2.0) * modified;
-    let max = max * modified;
-    let min = min * modified;
-
-
-    println!(
-        "  Latencies:\n    \
-        min    - {}ms\n    \
-        max    - {}ms\n    \
-        median - {}ms",
-        string(min).green(),
-        string(max).red(),
-        string(median).yellow(),
-    );
-    println!(
-        "  Requests:\n    \
-        Total Requests - {}\n    \
-        Requests/Sec   - {} ",
-        string(total_reqs).cyan(),
-        string(total_reqs as f64 / time_taken).cyan(),
-    );
-    */
 

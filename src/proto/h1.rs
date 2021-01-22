@@ -50,7 +50,6 @@ pub async fn client(
     }
     let time_taken = start.elapsed();
 
-
     let result = WorkerResult{
         total_times: vec![time_taken],
         request_times: times,

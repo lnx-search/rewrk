@@ -51,16 +51,7 @@ fn main() {
         }
     };
 
-    let http2: bool = match args
-        .value_of("protocol")
-        .unwrap_or("1")
-        .parse::<u8>() {
-        Ok(v) => v != 1,
-        Err(_) => {
-            println!("Invalid parameter for 'h2' given, input type must be a boolean.");
-            return;
-        }
-    };
+    let http2: bool = args.is_present("http2");
 
     let duration: &str = args.value_of("duration").unwrap_or("1s");
     let duration = match parse_duration(duration) {
@@ -71,12 +62,15 @@ fn main() {
         }
     };
 
+    let pct: bool = args.is_present("pct");
+
     let settings = bench::BenchmarkSettings {
         threads,
         connections: conns,
         host: host.to_string(),
         http2,
-        duration
+        duration,
+        display_percentile: pct,
     };
 
     bench::start_benchmark(settings);
@@ -191,18 +185,24 @@ fn parse_args() -> ArgMatches<'static> {
                 .takes_value(true)
                 .required(true)
         ).arg(
-            Arg::with_name("protocol")
-                .short("p")
-                .long("protocol")
-                .help("Set the client to use http2 only. (default is http/1) e.g. '-protocol 1'")
-                .takes_value(true)
-                .default_value("1")
-        ).arg(
+            Arg::with_name("http2")
+                .long("http2")
+                .help("Set the client to use http2 only. (default is http/1) e.g. '--http2'")
+                .required(false)
+                .takes_value(false)
+    ).arg(
             Arg::with_name("duration")
                 .short("d")
                 .long("duration")
                 .help("Set the duration of the benchmark.")
                 .takes_value(true)
                 .required(true)
+        ).arg(
+            Arg::with_name("pct")
+                .long("pct")
+                .help("Displays the percentile table after benchmarking.")
+                .takes_value(false)
+                .required(false)
+
         ).get_matches()
 }
