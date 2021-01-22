@@ -52,7 +52,7 @@ pub async fn client(
 
 
     let result = WorkerResult{
-        total_time: time_taken,
+        total_times: vec![time_taken],
         request_times: times,
     };
 
