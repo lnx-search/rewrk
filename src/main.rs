@@ -54,11 +54,17 @@ fn main() {
     };
 
     let http2: bool = args.is_present("http2");
-    let random: bool = args.is_present("random");
+    // let random: bool = args.is_present("random");
 
-    let bench_type = if random {
-        BenchType::Random
-    } else if http2 {
+    // let bench_type = if random {
+    //     BenchType::Random
+    // } else if http2 {
+    //     BenchType::HTTP2
+    // } else {
+    //     BenchType::HTTP1
+    // };
+
+    let bench_type = if http2 {
         BenchType::HTTP2
     } else {
         BenchType::HTTP1
@@ -185,7 +191,7 @@ fn parse_args() -> ArgMatches<'static> {
                 .help("Set the client to use http2 only. (default is http/1) e.g. '--http2'")
                 .required(false)
                 .takes_value(false)
-    ).arg(
+        ).arg(
             Arg::with_name("duration")
                 .short("d")
                 .long("duration")
@@ -198,15 +204,17 @@ fn parse_args() -> ArgMatches<'static> {
                 .help("Displays the percentile table after benchmarking.")
                 .takes_value(false)
                 .required(false)
-        ).arg(
-            Arg::with_name("random")
-                .long("rand")
-                .help(
-                    "Sets the benchmark type to random mode, \
-                     clients will randomly connect and re-connect.\n\
-                     NOTE: This will cause the HTTP2 flag to be ignored."
-                )
-                .takes_value(false)
-                .required(false)
-        ).get_matches()
+        )
+        //.arg(
+        //    Arg::with_name("random")
+        //        .long("rand")
+        //        .help(
+        //            "Sets the benchmark type to random mode, \
+        //             clients will randomly connect and re-connect.\n\
+        //             NOTE: This will cause the HTTP2 flag to be ignored."
+        //        )
+        //        .takes_value(false)
+        //        .required(false)
+        //)
+        .get_matches()
 }

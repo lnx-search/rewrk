@@ -2,7 +2,7 @@ use async_channel::Sender;
 
 use tokio::task::JoinHandle;
 
-use crate::proto::{h1, h2, random_clients};
+use crate::proto::{h1, h2};
 use crate::results::WorkerResult;
 
 pub type Handle = JoinHandle<Result<WorkerResult, String>>;
@@ -18,8 +18,6 @@ pub enum BenchType {
     /// Sets the http protocol to be used as h2
     HTTP2,
 
-    /// A mix of both HTTP1 and HTTP2 with random client connections.
-    Random,
 }
 
 
@@ -57,14 +55,6 @@ pub async fn create_pool(
             },
             BenchType::HTTP2 => {
                 let handle: Handle = tokio::spawn(h2::client(
-                    rx.clone(),
-                    host.clone(),
-                    predicted_size,
-                ));
-                handles.push(handle);
-            },
-            BenchType::Random => {
-                let handle: Handle = tokio::spawn(random_clients::client(
                     rx.clone(),
                     host.clone(),
                     predicted_size,
