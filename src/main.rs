@@ -2,6 +2,7 @@ extern crate clap;
 use clap::{Arg, App, ArgMatches};
 use tokio::time::Duration;
 use regex::Regex;
+use crate::http::BenchType;
 
 mod http;
 mod runtime;
@@ -53,6 +54,15 @@ fn main() {
     };
 
     let http2: bool = args.is_present("http2");
+    let random: bool = args.is_present("random");
+
+    let bench_type = if random {
+        BenchType::Random
+    } else if http2 {
+        BenchType::HTTP2
+    } else {
+        BenchType::HTTP1
+    };
 
     let duration: &str = args.value_of("duration").unwrap_or("1s");
     let duration = match parse_duration(duration) {
@@ -69,7 +79,7 @@ fn main() {
         threads,
         connections: conns,
         host: host.to_string(),
-        http2,
+        bench_type,
         duration,
         display_percentile: pct,
     };
@@ -188,6 +198,15 @@ fn parse_args() -> ArgMatches<'static> {
                 .help("Displays the percentile table after benchmarking.")
                 .takes_value(false)
                 .required(false)
-
+        ).arg(
+            Arg::with_name("random")
+                .long("rand")
+                .help(
+                    "Sets the benchmark type to random mode, \
+                     clients will randomly connect and re-connect.\n\
+                     NOTE: This will cause the HTTP2 flag to be ignored."
+                )
+                .takes_value(false)
+                .required(false)
         ).get_matches()
 }

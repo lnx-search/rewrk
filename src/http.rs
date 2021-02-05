@@ -1,4 +1,4 @@
-use async_channel::{Receiver, Sender};
+use async_channel::Sender;
 
 use tokio::task::JoinHandle;
 
@@ -10,6 +10,7 @@ pub type Handles = Vec<Handle>;
 
 
 /// The type of bench that is being ran.
+#[derive(Clone, Copy, Debug)]
 pub enum BenchType {
     /// Sets the http protocol to be used as h1
     HTTP1,
@@ -48,7 +49,7 @@ pub async fn create_pool(
         match bench_type {
             BenchType::HTTP1 => {
                 let handle: Handle = tokio::spawn(h1::client(
-                    poller.clone(),
+                    rx.clone(),
                     host.clone(),
                     predicted_size,
                 ));
@@ -56,7 +57,7 @@ pub async fn create_pool(
             },
             BenchType::HTTP2 => {
                 let handle: Handle = tokio::spawn(h2::client(
-                    poller.clone(),
+                    rx.clone(),
                     host.clone(),
                     predicted_size,
                 ));
@@ -64,7 +65,7 @@ pub async fn create_pool(
             },
             BenchType::Random => {
                 let handle: Handle = tokio::spawn(random_clients::client(
-                    poller.clone(),
+                    rx.clone(),
                     host.clone(),
                     predicted_size,
                 ));

@@ -22,8 +22,8 @@ pub struct BenchmarkSettings {
     /// The host connection / url.
     pub host: String,
 
-    /// HTTP/2 only (on/off).
-    pub http2: bool,
+    /// The bench mark type e.g. http1 only.
+    pub bench_type: http::BenchType,
 
     /// The duration of the benchmark.
     pub duration: Duration,
@@ -54,7 +54,7 @@ async fn run(settings: BenchmarkSettings) {
     let (emitter, handles) = http::create_pool(
         settings.connections,
         settings.host.clone(),
-        settings.http2,
+        settings.bench_type,
         predict_size as usize,
     ).await;
 
