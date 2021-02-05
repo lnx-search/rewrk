@@ -284,7 +284,7 @@ impl WorkerResult {
         let display_total = format_data(total as f64);
         let display_rate = format_data(rate);
 
-        println!("  Transfer:");
+        println!("  Body Transfer:");
         println!(
             "    Total: {:^7} Transfer Rate: {:^7}",
             format!("{}", display_total).as_str().bright_cyan(),
