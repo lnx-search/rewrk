@@ -2,7 +2,9 @@ use async_channel::Receiver;
 
 use std::time::Instant;
 
-use tokio::time::Duration;
+use rand::random;
+
+use tokio::time::{Duration, sleep};
 
 use hyper::StatusCode;
 use hyper::Client;
@@ -41,6 +43,12 @@ pub async fn client(
 
     let start = Instant::now();
     while let Ok(_) = waiter.recv().await {
+        // Its time to get funky
+        if random::<u8>() <= 60u8 {
+            session = Client::new();
+            sleep(Duration::from_secs_f64(0.5)).await;
+        }
+
         let req = get_request(&host);
 
         let ts = Instant::now();

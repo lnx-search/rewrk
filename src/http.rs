@@ -2,11 +2,24 @@ use async_channel::{Receiver, Sender};
 
 use tokio::task::JoinHandle;
 
-use crate::proto::{h1, h2};
+use crate::proto::{h1, h2, random_clients};
 use crate::results::WorkerResult;
 
 pub type Handle = JoinHandle<Result<WorkerResult, String>>;
 pub type Handles = Vec<Handle>;
+
+
+/// The type of bench that is being ran.
+pub enum BenchType {
+    /// Sets the http protocol to be used as h1
+    HTTP1,
+
+    /// Sets the http protocol to be used as h2
+    HTTP2,
+
+    /// A mix of both HTTP1 and HTTP2 with random client connections.
+    Random,
+}
 
 
 /// Creates n amount of workers that all listen and work steal off the same
@@ -24,58 +37,42 @@ pub type Handles = Vec<Handle>;
 pub async fn create_pool(
     connections: usize,
     host: String,
-    http2: bool,
+    bench_type: BenchType,
     predicted_size: usize,
 ) -> (Sender<()>, Handles) {
-
     let (tx, rx) = async_channel::bounded::<()>(connections * 2);
 
-    let handles = if http2 {
-        start_h2(connections, host, rx, predicted_size).await
-    } else {
-        start_h1(connections, host, rx, predicted_size).await
-    };
+
+    let mut handles: Handles = Vec::with_capacity(connections);
+    for _ in 0..connections {
+        match bench_type {
+            BenchType::HTTP1 => {
+                let handle: Handle = tokio::spawn(h1::client(
+                    poller.clone(),
+                    host.clone(),
+                    predicted_size,
+                ));
+                handles.push(handle);
+            },
+            BenchType::HTTP2 => {
+                let handle: Handle = tokio::spawn(h2::client(
+                    poller.clone(),
+                    host.clone(),
+                    predicted_size,
+                ));
+                handles.push(handle);
+            },
+            BenchType::Random => {
+                let handle: Handle = tokio::spawn(random_clients::client(
+                    poller.clone(),
+                    host.clone(),
+                    predicted_size,
+                ));
+                handles.push(handle);
+            },
+        };
+    }
 
     (tx, handles)
-}
-
-
-async fn start_h1(
-    connections: usize,
-    host: String,
-    poller: Receiver<()>,
-    predicted_size: usize,
-) -> Handles {
-    let mut handles: Handles = Vec::with_capacity(connections);
-    for _ in 0..connections {
-        let handle: Handle = tokio::spawn(h1::client(
-            poller.clone(),
-            host.clone(),
-            predicted_size,
-        ));
-        handles.push(handle);
-    }
-
-    handles
-}
-
-
-async fn start_h2(
-    connections: usize,
-    host: String,
-    poller: Receiver<()>,
-    predicted_size: usize,
-) -> Handles {
-    let mut handles: Handles = Vec::with_capacity(connections);
-    for _ in 0..connections {
-        let handle: Handle = tokio::spawn(h2::client(
-            poller.clone(),
-            host.clone(),
-            predicted_size,
-        ));
-        handles.push(handle);
-    }
-
-    handles
 }
 
