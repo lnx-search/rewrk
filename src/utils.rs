@@ -30,7 +30,14 @@ pub fn get_request_new(uri: &Uri) -> Request<Body> {
 fn host_header(uri: &Uri) -> String {
     let invalid_uri = "Invalid URI";
 
-    format!("{}:{}", uri.host().expect(invalid_uri), uri.port_u16().expect(invalid_uri))
+    match uri.port_u16() {
+        Some(port) => {
+            format!("{}:{}", uri.host().expect(invalid_uri), port)
+        },
+        None => {
+            uri.host().expect(invalid_uri).to_owned()
+        },
+    }
 }
 
 /// Dirt simple div mod function.
