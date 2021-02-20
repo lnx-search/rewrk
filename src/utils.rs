@@ -1,4 +1,4 @@
-use hyper::{Request, Body};
+use hyper::{Request, Body, Uri};
 
 const GIGABYTE: f64 = (1024 * 1024 * 1024) as f64;
 const MEGABYTE: f64 = (1024 * 1024) as f64;
@@ -13,6 +13,31 @@ pub fn get_request(host: &str) -> Request<Body> {
         .method("GET")
         .body(Body::from(""))
         .expect("Failed to build request")
+}
+
+/// Constructs a new Request of a given host.
+pub fn get_request_new(uri: &Uri) -> Request<Body> {
+    let host = host_header(uri);
+
+    Request::builder()
+        .uri(uri)
+        .header("Host", host)
+        .method("GET")
+        .body(Body::from(""))
+        .expect("Failed to build request")
+}
+
+fn host_header(uri: &Uri) -> String {
+    let invalid_uri = "Invalid URI";
+
+    match uri.port_u16() {
+        Some(port) => {
+            format!("{}:{}", uri.host().expect(invalid_uri), port)
+        },
+        None => {
+            uri.host().expect(invalid_uri).to_owned()
+        },
+    }
 }
 
 /// Dirt simple div mod function.
