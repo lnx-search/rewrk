@@ -1,5 +1,3 @@
-use async_channel::Receiver;
-
 use std::time::Instant;
 
 use tokio::time::Duration;
@@ -9,6 +7,7 @@ use hyper::Client;
 
 use crate::results::WorkerResult;
 use crate::utils::get_request;
+
 
 
 /// A single http/1 connection worker
@@ -24,7 +23,7 @@ use crate::utils::get_request;
 ///
 /// todo Make concurrent handling for h2 tests
 pub async fn client(
-    waiter: Receiver<()>,
+    time_for: Duration,
     host: String,
     predicted_size: usize,
 ) -> Result<WorkerResult, String> {
@@ -36,7 +35,7 @@ pub async fn client(
     let mut buffer_counter: usize = 0;
 
     let start = Instant::now();
-    while let Ok(_) = waiter.recv().await {
+    while time_for > start.elapsed() {
         let req = get_request(&host);
 
         let ts = Instant::now();

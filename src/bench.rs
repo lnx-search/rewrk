@@ -1,6 +1,5 @@
 use std::time::Duration;
 use std::fmt::Display;
-use tokio::time::Instant;
 use colored::*;
 
 use crate::runtime;
@@ -51,7 +50,8 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 async fn run(settings: BenchmarkSettings) {
     let predict_size = settings.duration.as_secs() * 10_000;
 
-    let (emitter, handles) = http::create_pool(
+    let handles = http::create_pool(
+        settings.duration,
         settings.connections,
         settings.host.clone(),
         settings.bench_type,
@@ -64,15 +64,6 @@ async fn run(settings: BenchmarkSettings) {
         settings.host,
         humanize(settings.duration),
     );
-
-    let start = Instant::now();
-    while start.elapsed() < settings.duration {
-        if let Err(_) = emitter.send(()).await {
-            break;
-        };
-    }
-    drop(emitter);
-
 
     let mut combiner = WorkerResult::default();
     for handle in handles {

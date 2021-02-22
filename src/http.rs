@@ -1,9 +1,8 @@
-use async_channel::Sender;
-
 use tokio::task::JoinHandle;
 
 use crate::proto::{h1, h2};
 use crate::results::WorkerResult;
+use tokio::time::Duration;
 
 pub type Handle = JoinHandle<Result<WorkerResult, String>>;
 pub type Handles = Vec<Handle>;
@@ -34,20 +33,18 @@ pub enum BenchType {
 /// Http2:
 ///     A bool to signal if the worker should use only HTTP/2 or HTTP/1.
 pub async fn create_pool(
+    time_for: Duration,
     connections: usize,
     host: String,
     bench_type: BenchType,
     predicted_size: usize,
-) -> (Sender<()>, Handles) {
-    let (tx, rx) = async_channel::bounded::<()>(connections * 2);
-
-
+) -> Handles {
     let mut handles: Handles = Vec::with_capacity(connections);
     for _ in 0..connections {
         match bench_type {
             BenchType::HTTP1 => {
                 let handle: Handle = tokio::spawn(h1::client(
-                    rx.clone(),
+                    time_for,
                     host.clone(),
                     predicted_size,
                 ));
@@ -55,7 +52,7 @@ pub async fn create_pool(
             },
             BenchType::HTTP2 => {
                 let handle: Handle = tokio::spawn(h2::client(
-                    rx.clone(),
+                    time_for,
                     host.clone(),
                     predicted_size,
                 ));
@@ -64,6 +61,6 @@ pub async fn create_pool(
         };
     }
 
-    (tx, handles)
+    handles
 }
 

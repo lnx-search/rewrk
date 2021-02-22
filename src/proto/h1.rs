@@ -1,5 +1,3 @@
-use async_channel::Receiver;
-
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -18,6 +16,7 @@ macro_rules! conv_err {
     ( $e:expr ) => ( $e.map_err(|e| format!("{}", e)) )
 }
 
+
 /// A single http/1 connection worker
 ///
 /// Builds a new http client with the http2_only option set either to false.
@@ -29,7 +28,7 @@ macro_rules! conv_err {
 /// worker which can then be sent back to the controller when the handle
 /// is awaited.
 pub async fn client(
-    waiter: Receiver<()>,
+    time_for: Duration,
     uri_string: String,
     predicted_size: usize,
 ) -> Result<WorkerResult, String> {
@@ -56,28 +55,18 @@ pub async fn client(
     let mut buffer_counter: usize = 0;
 
     let start = Instant::now();
-    while let Ok(_) = waiter.recv().await {
+    while time_for > start.elapsed() {
         let req = get_request_new(&uri);
 
         let ts = Instant::now();
-        let re = session.send_request(req).await;
+        let r = conv_err!(session.send_request(req).await)?;
         let took = ts.elapsed();
 
-        if let Err(e) = &re {
-            return Err(format!("{:?}", e));
-        } else if let Ok(r) = re {
-            let status = r.status();
-            assert_eq!(status, StatusCode::OK);
+        let status = r.status();
+        assert_eq!(status, StatusCode::OK);
 
-            let buff = match hyper::body::to_bytes(r).await {
-                Ok(buff) => buff,
-                Err(e) => return Err(format!(
-                    "Failed to read stream {:?}",
-                     e
-                ))
-            };
-            buffer_counter += buff.len();
-        }
+        let buff = conv_err!(hyper::body::to_bytes(r).await)?;
+        buffer_counter += buff.len();
 
         times.push(took);
 
