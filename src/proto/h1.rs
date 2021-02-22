@@ -9,7 +9,7 @@ use hyper::StatusCode;
 use hyper::client::conn;
 
 use crate::results::WorkerResult;
-use crate::utils::get_request_new;
+use crate::utils::get_request;
 
 /// A macro that converts Error to String
 macro_rules! conv_err {
@@ -56,7 +56,7 @@ pub async fn client(
 
     let start = Instant::now();
     while time_for > start.elapsed() {
-        let req = get_request_new(&uri);
+        let req = get_request(&uri);
 
         let ts = Instant::now();
         let r = conv_err!(session.send_request(req).await)?;
