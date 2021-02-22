@@ -1,13 +1,20 @@
+use std::str::FromStr;
 use std::time::Instant;
 
 use tokio::time::Duration;
+use tokio::net::TcpStream;
 
+use hyper::Uri;
 use hyper::StatusCode;
-use hyper::Client;
+use hyper::client::conn;
 
 use crate::results::WorkerResult;
-use crate::utils::get_request;
+use crate::utils::get_request_new;
 
+/// A macro that converts Error to String
+macro_rules! conv_err {
+    ( $e:expr ) => ( $e.map_err(|e| format!("{}", e)) )
+}
 
 
 /// A single http/1 connection worker
@@ -24,39 +31,44 @@ use crate::utils::get_request;
 /// todo Make concurrent handling for h2 tests
 pub async fn client(
     time_for: Duration,
-    host: String,
+    uri_string: String,
     predicted_size: usize,
 ) -> Result<WorkerResult, String> {
-    let session = Client::builder()
-        .http2_only(true)
-        .build_http();
+    let uri = conv_err!( Uri::from_str(&uri_string) )?;
+
+    let host = uri.host().ok_or("cant find host")?;
+    let port = uri.port_u16().unwrap_or(80);
+    
+    let host_port = format!("{}:{}", host, port);
+
+    let stream = conv_err!( TcpStream::connect(&host_port).await )?;
+
+    let (mut session, connection) = conv_err!( conn::handshake(stream).await )?;
+    tokio::spawn(async move {
+        if let Err(_) = connection.await {
+        
+        }
+
+        // Connection died
+        // Should reconnect and log
+    });
 
     let mut times: Vec<Duration> = Vec::with_capacity(predicted_size);
     let mut buffer_counter: usize = 0;
 
     let start = Instant::now();
     while time_for > start.elapsed() {
-        let req = get_request(&host);
+        let req = get_request_new(&uri);
 
         let ts = Instant::now();
-        let re = session.request(req).await;
+        let r = conv_err!(session.send_request(req).await)?;
         let took = ts.elapsed();
 
-        if let Err(e) = &re {
-            return Err(format!("{:?}", e));
-        } else if let Ok(r) = re {
-            let status = r.status();
-            assert_eq!(status, StatusCode::OK);
+        let status = r.status();
+        assert_eq!(status, StatusCode::OK);
 
-            let buff = match hyper::body::to_bytes(r).await {
-                Ok(buff) => buff,
-                Err(e) => return Err(format!(
-                    "Failed to read stream {:?}",
-                     e
-                ))
-            };
-            buffer_counter += buff.len();
-        }
+        let buff = conv_err!(hyper::body::to_bytes(r).await)?;
+        buffer_counter += buff.len();
 
         times.push(took);
 
@@ -71,3 +83,5 @@ pub async fn client(
 
     Ok(result)
 }
+
+
