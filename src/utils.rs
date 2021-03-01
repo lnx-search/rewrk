@@ -4,19 +4,8 @@ const GIGABYTE: f64 = (1024 * 1024 * 1024) as f64;
 const MEGABYTE: f64 = (1024 * 1024) as f64;
 const KILOBYTE: f64 = 1024 as f64;
 
-
 /// Constructs a new Request of a given host.
-pub fn get_request(host: &str) -> Request<Body> {
-    Request::builder()
-        .uri(host)
-        .header("Host", host)
-        .method("GET")
-        .body(Body::from(""))
-        .expect("Failed to build request")
-}
-
-/// Constructs a new Request of a given host.
-pub fn get_request_new(uri: &Uri) -> Request<Body> {
+pub fn get_request(uri: &Uri) -> Request<Body> {
     let host = host_header(uri);
 
     Request::builder()
