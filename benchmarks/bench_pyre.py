@@ -35,13 +35,12 @@ def start_benchmark(
 
 
 def get_avg_without_enom(inputs: list) -> float:
-    print(inputs)
     _, *good, _ = sorted(inputs)
     return sum(good) / len(good)
 
 
 def make_runs():
-    host = "http://127.0.0.1:8080"
+    host = "http://127.0.0.1:5000"
     connections_start = 60
     connections_end = 100
     connections_step = 5
