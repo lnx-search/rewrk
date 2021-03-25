@@ -43,7 +43,8 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
     let rounds = settings.rounds;
     for _ in 0..rounds {
-        rt.block_on(run(settings.clone()))
+        rt.block_on(run(settings.clone()));
+        println!();
     }
 }
 
