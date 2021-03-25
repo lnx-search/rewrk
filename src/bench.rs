@@ -68,12 +68,14 @@ async fn run(settings: BenchmarkSettings) {
         predict_size as usize,
     ).await;
 
-    println!(
-        "Benchmarking {} connections @ {} for {}",
-        string(settings.connections).cyan(),
-        settings.host,
-        humanize(settings.duration),
-    );
+    if !settings.display_json {
+         println!(
+            "Benchmarking {} connections @ {} for {}",
+            string(settings.connections).cyan(),
+            settings.host,
+            humanize(settings.duration),
+        );
+    }
 
     let mut combiner = WorkerResult::default();
     for handle in handles {
