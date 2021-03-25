@@ -73,6 +73,12 @@ fn main() {
 
     let pct: bool = args.is_present("pct");
 
+    let rounds: usize = args
+        .value_of("rounds")
+        .unwrap_or("1")
+        .parse::<usize>()
+        .unwrap_or(1);
+
     let settings = bench::BenchmarkSettings {
         threads,
         connections: conns,
@@ -81,6 +87,7 @@ fn main() {
         duration,
         display_percentile: pct,
         display_json: json,
+        rounds,
     };
 
     bench::start_benchmark(settings);
@@ -202,6 +209,12 @@ fn parse_args() -> ArgMatches<'static> {
                 .long("json")
                 .help("Displays the results in a json format")
                 .takes_value(false)
+                .required(false)
+        ).arg(
+            Arg::with_name("rounds")
+                .long("rounds")
+                .help("Repeats the benchmarks n amount of times")
+                .takes_value(true)
                 .required(false)
         )
         //.arg(

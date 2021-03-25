@@ -27,16 +27,24 @@ pub struct BenchmarkSettings {
     /// The duration of the benchmark.
     pub duration: Duration,
 
+    /// Display the percentile table.
     pub display_percentile: bool,
 
+    /// Display the result data as a json.
     pub display_json: bool,
+
+    /// The number of rounds to repeat.
+    pub rounds: usize,
 }
 
 
 /// Builds the runtime with the given settings and blocks on the main future.
 pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
-    rt.block_on(run(settings))
+    let rounds = settings.rounds;
+    for _ in 0..rounds {
+        rt.block_on(run(settings.clone()))
+    }
 }
 
 
