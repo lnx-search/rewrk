@@ -42,9 +42,13 @@ pub struct BenchmarkSettings {
 pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
     let rounds = settings.rounds;
+    let is_json = settings.display_json;
     for _ in 0..rounds {
         rt.block_on(run(settings.clone()));
-        println!();
+
+        if !is_json {
+            println!();
+        };
     }
 }
 
