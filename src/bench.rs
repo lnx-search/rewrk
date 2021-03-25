@@ -87,7 +87,7 @@ async fn run(settings: BenchmarkSettings) {
         let result = match handle.await {
             Ok(r) => r,
             Err(e) => {
-                println!("{}", e);
+                eprintln!("error processing results: {}", e);
                 return;
             }
         };
@@ -95,7 +95,7 @@ async fn run(settings: BenchmarkSettings) {
         if let Ok(stats) = result {
             combiner = combiner.combine(stats);
         } else if let Err(e) = result {
-            eprintln!("{}", e);
+            eprintln!("error processing results {}", e);
             return;
         }
     }

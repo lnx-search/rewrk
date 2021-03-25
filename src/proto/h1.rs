@@ -140,7 +140,7 @@ async fn connect_with_retry(
         }
     }
 
-    Err("".into())
+    Err("connection closed".into())
 }
 
 async fn connect(
