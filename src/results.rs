@@ -2,6 +2,8 @@
 
 use tokio::time::Duration;
 use colored::Colorize;
+use serde_json::json;
+
 use crate::utils::format_data;
 
 
@@ -301,8 +303,6 @@ impl WorkerResult {
             "| {:^15} | {:^15} |",
             "Percentile".bright_cyan(),
             "Avg Latency".bright_yellow(),
-            // "Min".bright_green(),
-            // "Max".bright_red(),
         );
 
         println!("+ {:-^15} + {:-^15} +", "", "",);
@@ -334,6 +334,35 @@ impl WorkerResult {
         );
 
         println!("+ {:-^15} + {:-^15} +", "", "",);
+    }
+
+    pub fn display_json(&self) {
+        let modified = 1000 as f64;
+        let avg = self.avg_request_latency().as_secs_f64() * modified;
+        let max = self.max_request_latency().as_secs_f64() * modified;
+        let min = self.min_request_latency().as_secs_f64() * modified;
+        let std_deviation = self.std_deviation_request_latency() * modified;
+
+        let total = self.total_transfer() as f64;
+        let rate = self.avg_transfer();
+
+        let total_transfer = self.total_requests();
+        let avg_transfer = self.avg_request_per_sec();
+
+        let out = json!({
+            "latency_avg": avg,
+            "latency_max": max,
+            "latency_min": min,
+            "latency_std_deviation": std_deviation,
+
+            "transfer_total": total,
+            "transfer_rate": rate,
+
+            "requests_total": total_transfer,
+            "requests_avg": avg_transfer,
+        });
+
+        println!("{}", out.to_string())
     }
 }
 

@@ -156,12 +156,14 @@ async fn connect(
     let (session, connection) = conv_err!( conn::handshake(stream).await )?;
     tokio::spawn(async move {
         if let Err(_) = connection.await {
-        
+
         }
 
         // Connection died
         // Should reconnect and log
-        if let Err(_) = disconnect_tx.send(()).await {}
+        if let Err(_) = disconnect_tx.send(()).await {
+
+        }
     });
 
     Ok(session)

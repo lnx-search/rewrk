@@ -28,6 +28,8 @@ pub struct BenchmarkSettings {
     pub duration: Duration,
 
     pub display_percentile: bool,
+
+    pub display_json: bool,
 }
 
 
@@ -81,6 +83,11 @@ async fn run(settings: BenchmarkSettings) {
             eprintln!("{}", e);
             return;
         }
+    }
+
+    if settings.display_json {
+        combiner.display_json();
+        return
     }
 
     combiner.display_latencies();

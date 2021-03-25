@@ -54,15 +54,7 @@ fn main() {
     };
 
     let http2: bool = args.is_present("http2");
-    // let random: bool = args.is_present("random");
-
-    // let bench_type = if random {
-    //     BenchType::Random
-    // } else if http2 {
-    //     BenchType::HTTP2
-    // } else {
-    //     BenchType::HTTP1
-    // };
+    let json: bool = args.is_present("json");
 
     let bench_type = if http2 {
         BenchType::HTTP2
@@ -88,6 +80,7 @@ fn main() {
         bench_type,
         duration,
         display_percentile: pct,
+        display_json: json,
     };
 
     bench::start_benchmark(settings);
@@ -202,6 +195,12 @@ fn parse_args() -> ArgMatches<'static> {
             Arg::with_name("pct")
                 .long("pct")
                 .help("Displays the percentile table after benchmarking.")
+                .takes_value(false)
+                .required(false)
+        ).arg(
+            Arg::with_name("json")
+                .long("json")
+                .help("Displays the results in a json format")
                 .takes_value(false)
                 .required(false)
         )
