@@ -1,3 +1,4 @@
+use crate::error::AnyError;
 use crate::proto::tcp_stream;
 
 use std::str::FromStr;
@@ -14,21 +15,6 @@ use hyper::client::conn;
 
 use crate::results::WorkerResult;
 use crate::utils::get_request;
-
-/// A macro that converts Error to String
-macro_rules! conv_err {
-    ( $e:expr ) => ( $e.map_err(|e| format!("{}", e)) )
-}
-
-/// A macro that returns specified value on error
-macro_rules! ignore {
-    ( $e:expr => $r:expr ) => {
-        match $e {
-            Ok(v) => v,
-            Err(_) => return $r,
-        }
-    }
-}
 
 
 /// A single http/1 connection worker
@@ -47,8 +33,8 @@ pub async fn client(
     time_for: Duration,
     uri_string: String,
     predicted_size: usize,
-) -> Result<WorkerResult, String> {
-    let uri = conv_err!( Uri::from_str(&uri_string) )?;
+) -> Result<WorkerResult, AnyError> {
+    let uri = Uri::from_str(&uri_string)?;
 
     let host = uri.host().ok_or("cant find host")?;
     let port = uri.port_u16().unwrap_or(80);
@@ -101,21 +87,30 @@ pub async fn client(
     Ok(result)
 }
 
+// NOTE: Currently ignoring errors.
 async fn send_request(
     uri: &Uri,
     session: &mut conn::SendRequest<Body>,
     times: &mut Vec<Duration>,
-) -> Result<(), String> {
+) -> Result<(), AnyError> {
     let req = get_request(&uri);
 
     let ts = Instant::now();
-    let r = ignore!(session.send_request(req).await => Ok(()));
+
+    let resp = match session.send_request(req).await {
+        Ok(v) => v,
+        Err(_) => return Ok(()),
+    };
+
     let took = ts.elapsed();
 
-    let status = r.status();
+    let status = resp.status();
     assert_eq!(status, StatusCode::OK);
 
-    let _buff = ignore!(hyper::body::to_bytes(r).await => Ok(()));
+    let _buff = match hyper::body::to_bytes(resp).await {
+        Ok(v) => v,
+        Err(_) => return Ok(()),
+    };
 
     times.push(took);
 
@@ -128,7 +123,7 @@ async fn connect_with_retry(
     host_port: &str,
     counter: Arc<AtomicUsize>,
     disconnect_tx: mpsc::Sender<()>,
-) -> Result<conn::SendRequest<Body>, String> {
+) -> Result<conn::SendRequest<Body>, AnyError> {
     while start.elapsed() < time_for {
         let res = connect(
             host_port,
@@ -142,28 +137,30 @@ async fn connect_with_retry(
         }
     }
 
-    Err("".into())
+    Err("connection closed".into())
 }
 
 async fn connect(
     host_port: &str,
     counter: Arc<AtomicUsize>,
     disconnect_tx: mpsc::Sender<()>,
-) -> Result<conn::SendRequest<Body>, String> {
+) -> Result<conn::SendRequest<Body>, AnyError> {
     let stream = tcp_stream::CustomTcpStream::new(
-        conv_err!( TcpStream::connect(&host_port).await )?,
+        TcpStream::connect(&host_port).await?,
         counter.clone()
     );
 
-    let (session, connection) = conv_err!( conn::handshake(stream).await )?;
+    let (session, connection) = conn::handshake(stream).await?;
     tokio::spawn(async move {
         if let Err(_) = connection.await {
-        
+
         }
 
         // Connection died
         // Should reconnect and log
-        if let Err(_) = disconnect_tx.send(()).await {}
+        if let Err(_) = disconnect_tx.send(()).await {
+
+        }
     });
 
     Ok(session)
