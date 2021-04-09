@@ -4,6 +4,7 @@ use tokio::time::Duration;
 use regex::Regex;
 use crate::http::BenchType;
 
+mod error;
 mod http;
 mod runtime;
 mod bench;
