@@ -13,6 +13,8 @@ use tokio::sync::mpsc;
 use hyper::{Body, Uri, StatusCode};
 use hyper::client::conn;
 
+use tower::{Service, ServiceExt};
+
 use crate::results::WorkerResult;
 use crate::utils::get_request;
 
@@ -95,7 +97,12 @@ async fn send_request(
 
     let ts = Instant::now();
 
-    let resp = match session.send_request(req).await {
+    match session.ready().await {
+        Ok(_) => (),
+        Err(_) => return Ok(()),
+    }
+
+    let resp = match session.call(req).await {
         Ok(v) => v,
         Err(_) => return Ok(()),
     };
