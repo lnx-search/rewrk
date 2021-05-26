@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 hyper = { version = "0.14", features = ["full"] }
+tower = { version = "0.4.7", features = ["util"] }
 clap = "2.33.3"
 async-channel = "1.5.1"
 colored = "2"
