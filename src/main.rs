@@ -1,21 +1,20 @@
 extern crate clap;
-use clap::{Arg, App, ArgMatches};
-use tokio::time::Duration;
-use regex::Regex;
 use crate::http::BenchType;
+use clap::{App, Arg, ArgMatches};
+use regex::Regex;
+use tokio::time::Duration;
 
+mod bench;
 mod error;
 mod http;
-mod runtime;
-mod bench;
 mod proto;
 mod results;
+mod runtime;
 mod utils;
 
-
 /// Matches a string like '12d 24h 5m 45s' to a regex capture.
-static DURATION_MATCH: &str = "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
-
+static DURATION_MATCH: &str =
+    "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
 
 /// ReWrk
 ///
@@ -24,10 +23,7 @@ static DURATION_MATCH: &str = "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>
 fn main() {
     let args = parse_args();
 
-    let threads: usize = match args
-        .value_of("threads")
-        .unwrap_or("1")
-        .parse() {
+    let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
             println!("Invalid parameter for 'threads' given, input type must be a integer.");
@@ -35,10 +31,7 @@ fn main() {
         }
     };
 
-    let conns: usize = match args
-        .value_of("connections")
-        .unwrap_or("1")
-        .parse() {
+    let conns: usize = match args.value_of("connections").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
             println!("Invalid parameter for 'connections' given, input type must be a integer.");
@@ -94,7 +87,6 @@ fn main() {
     bench::start_benchmark(settings);
 }
 
-
 /// Parses a duration string from the CLI to a Duration.
 /// '11d 3h 32m 4s' -> Duration
 ///
@@ -106,58 +98,40 @@ fn parse_duration(duration: &str) -> Result<Duration, String> {
     let re = Regex::new(DURATION_MATCH).unwrap();
     for cap in re.captures_iter(duration) {
         let add_to = if let Some(days) = cap.name("days") {
-            let days = days
-                .as_str()
-                .parse::<u64>()
-                .unwrap();
+            let days = days.as_str().parse::<u64>().unwrap();
 
             let seconds = days * 24 * 60 * 60;
             Duration::from_secs(seconds)
-
         } else if let Some(hours) = cap.name("hours") {
-            let hours = hours
-                .as_str()
-                .parse::<u64>()
-                .unwrap();
+            let hours = hours.as_str().parse::<u64>().unwrap();
 
             let seconds = hours * 60 * 60;
             Duration::from_secs(seconds)
-
         } else if let Some(minutes) = cap.name("minutes") {
-            let minutes = minutes
-                .as_str()
-                .parse::<u64>()
-                .unwrap();
+            let minutes = minutes.as_str().parse::<u64>().unwrap();
 
             let seconds = minutes * 60;
             Duration::from_secs(seconds)
-
         } else if let Some(seconds) = cap.name("seconds") {
-            let seconds = seconds
-                .as_str()
-                .parse::<u64>()
-                .unwrap();
+            let seconds = seconds.as_str().parse::<u64>().unwrap();
 
             Duration::from_secs(seconds)
-
         } else {
-            return Err(format!("Invalid match: {:?}", cap))
+            return Err(format!("Invalid match: {:?}", cap));
         };
 
         dur += add_to
     }
 
-
     if dur.as_secs() <= 0 {
         return Err(format!(
             "Failed to extract any valid duration from {}",
             duration
-        ))
+        ));
     }
 
     Ok(dur)
 }
-
 
 /// Contains Clap's app setup.
 fn parse_args() -> ArgMatches<'static> {
@@ -171,52 +145,59 @@ fn parse_args() -> ArgMatches<'static> {
                 .long("threads")
                 .help("Set the amount of threads to use e.g. '-t 12'")
                 .takes_value(true)
-                .default_value("1")
-        ).arg(
+                .default_value("1"),
+        )
+        .arg(
             Arg::with_name("connections")
                 .short("c")
                 .long("connections")
                 .help("Set the amount of concurrent e.g. '-c 512'")
                 .takes_value(true)
-                .default_value("1")
-        ).arg(
+                .default_value("1"),
+        )
+        .arg(
             Arg::with_name("host")
                 .short("h")
                 .long("host")
                 .help("Set the host to bench e.g. '-h http://127.0.0.1:5050'")
                 .takes_value(true)
-                .required(true)
-        ).arg(
+                .required(true),
+        )
+        .arg(
             Arg::with_name("http2")
                 .long("http2")
                 .help("Set the client to use http2 only. (default is http/1) e.g. '--http2'")
                 .required(false)
-                .takes_value(false)
-        ).arg(
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("duration")
                 .short("d")
                 .long("duration")
                 .help("Set the duration of the benchmark.")
                 .takes_value(true)
-                .required(true)
-        ).arg(
+                .required(true),
+        )
+        .arg(
             Arg::with_name("pct")
                 .long("pct")
                 .help("Displays the percentile table after benchmarking.")
                 .takes_value(false)
-                .required(false)
-        ).arg(
+                .required(false),
+        )
+        .arg(
             Arg::with_name("json")
                 .long("json")
                 .help("Displays the results in a json format")
                 .takes_value(false)
-                .required(false)
-        ).arg(
+                .required(false),
+        )
+        .arg(
             Arg::with_name("rounds")
                 .long("rounds")
                 .help("Repeats the benchmarks n amount of times")
                 .takes_value(true)
-                .required(false)
+                .required(false),
         )
         //.arg(
         //    Arg::with_name("random")

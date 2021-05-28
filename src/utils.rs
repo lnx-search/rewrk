@@ -1,4 +1,4 @@
-use hyper::{Request, Body, Uri};
+use hyper::{Body, Request, Uri};
 
 const GIGABYTE: f64 = (1024 * 1024 * 1024) as f64;
 const MEGABYTE: f64 = (1024 * 1024) as f64;
@@ -22,10 +22,8 @@ fn host_header(uri: &Uri) -> String {
     match uri.port_u16() {
         Some(port) => {
             format!("{}:{}", uri.host().expect(invalid_uri), port)
-        },
-        None => {
-            uri.host().expect(invalid_uri).to_owned()
-        },
+        }
+        None => uri.host().expect(invalid_uri).to_owned(),
     }
 }
 

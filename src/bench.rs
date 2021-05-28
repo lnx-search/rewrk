@@ -1,12 +1,11 @@
-use std::time::Duration;
-use std::fmt::Display;
 use colored::*;
+use std::fmt::Display;
+use std::time::Duration;
 
-use crate::runtime;
 use crate::http;
 use crate::results::WorkerResult;
+use crate::runtime;
 use crate::utils::div_mod;
-
 
 /// The customisable settings that build the benchmark's behaviour.
 #[derive(Clone, Debug)]
@@ -37,7 +36,6 @@ pub struct BenchmarkSettings {
     pub rounds: usize,
 }
 
-
 /// Builds the runtime with the given settings and blocks on the main future.
 pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
@@ -51,7 +49,6 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
         };
     }
 }
-
 
 /// Controls the benchmark itself.
 ///
@@ -71,10 +68,11 @@ async fn run(settings: BenchmarkSettings) {
         settings.host.clone(),
         settings.bench_type,
         predict_size as usize,
-    ).await;
+    )
+    .await;
 
     if !settings.display_json {
-         println!(
+        println!(
             "Benchmarking {} connections @ {} for {}",
             string(settings.connections).cyan(),
             settings.host,
@@ -102,7 +100,7 @@ async fn run(settings: BenchmarkSettings) {
 
     if settings.display_json {
         combiner.display_json();
-        return
+        return;
     }
 
     combiner.display_latencies();
@@ -114,12 +112,10 @@ async fn run(settings: BenchmarkSettings) {
     }
 }
 
-
 /// Uber lazy way of just stringing everything and limiting it to 2 d.p
 fn string<T: Display>(value: T) -> String {
     format!("{:.2}", value)
 }
-
 
 /// Turns a fairly un-readable float in seconds / Duration into a human
 /// friendly string.
@@ -153,5 +149,3 @@ fn humanize(time: Duration) -> String {
 
     human
 }
-
-

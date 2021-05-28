@@ -7,7 +7,6 @@ use tokio::time::Duration;
 
 pub type Handle = JoinHandle<Result<WorkerResult, AnyError>>;
 
-
 /// The type of bench that is being ran.
 #[derive(Clone, Copy, Debug)]
 pub enum BenchType {
@@ -16,9 +15,7 @@ pub enum BenchType {
 
     /// Sets the http protocol to be used as h2
     HTTP2,
-
 }
-
 
 /// Creates n amount of workers that all listen and work steal off the same
 /// async channel where n is the amount of concurrent connections wanted, all
@@ -44,24 +41,17 @@ pub async fn create_pool(
     for _ in 0..connections {
         match bench_type {
             BenchType::HTTP1 => {
-                let handle: Handle = tokio::spawn(h1::client(
-                    time_for,
-                    host.clone(),
-                    predicted_size,
-                ));
+                let handle: Handle =
+                    tokio::spawn(h1::client(time_for, host.clone(), predicted_size));
                 handles.push(handle);
-            },
+            }
             BenchType::HTTP2 => {
-                let handle: Handle = tokio::spawn(h2::client(
-                    time_for,
-                    host.clone(),
-                    predicted_size,
-                ));
+                let handle: Handle =
+                    tokio::spawn(h2::client(time_for, host.clone(), predicted_size));
                 handles.push(handle);
-            },
+            }
         };
     }
 
     handles
 }
-

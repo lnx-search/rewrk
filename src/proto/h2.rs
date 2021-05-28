@@ -2,22 +2,21 @@ use crate::error::AnyError;
 use crate::proto::tcp_stream;
 
 use std::str::FromStr;
-use std::time::Instant;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Instant;
 
-use tokio::time::Duration;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
+use tokio::time::Duration;
 
-use hyper::{Body, Uri, StatusCode};
 use hyper::client::conn;
+use hyper::{Body, StatusCode, Uri};
 
 use tower::{Service, ServiceExt};
 
 use crate::results::WorkerResult;
 use crate::utils::get_request;
-
 
 /// A single http/1 connection worker
 ///
@@ -55,12 +54,13 @@ pub async fn client(
         &host_port,
         counter.clone(),
         disconnect_tx.clone(),
-    ).await?;
+    )
+    .await?;
 
     let mut times: Vec<Duration> = Vec::with_capacity(predicted_size);
 
     while time_for > start.elapsed() {
-        tokio::select!{
+        tokio::select! {
             val = send_request(&uri, &mut session, &mut times) => {
                 if let Err(_e) = val {
                     // Errors are ignored currently.
@@ -80,10 +80,10 @@ pub async fn client(
 
     let time_taken = start.elapsed();
 
-    let result = WorkerResult{
+    let result = WorkerResult {
         total_times: vec![time_taken],
         request_times: times,
-        buffer_sizes: vec![counter.load(Ordering::Acquire)]
+        buffer_sizes: vec![counter.load(Ordering::Acquire)],
     };
 
     Ok(result)
@@ -132,11 +132,7 @@ async fn connect_with_retry(
     disconnect_tx: mpsc::Sender<()>,
 ) -> Result<conn::SendRequest<Body>, AnyError> {
     while start.elapsed() < time_for {
-        let res = connect(
-            host_port,
-            counter.clone(),
-            disconnect_tx.clone(),
-        ).await;
+        let res = connect(host_port, counter.clone(), disconnect_tx.clone()).await;
 
         match res {
             Ok(session) => return Ok(session),
@@ -152,25 +148,17 @@ async fn connect(
     counter: Arc<AtomicUsize>,
     disconnect_tx: mpsc::Sender<()>,
 ) -> Result<conn::SendRequest<Body>, AnyError> {
-    let stream = tcp_stream::CustomTcpStream::new(
-        TcpStream::connect(&host_port).await?,
-        counter.clone()
-    );
+    let stream =
+        tcp_stream::CustomTcpStream::new(TcpStream::connect(&host_port).await?, counter.clone());
 
     let (session, connection) = conn::handshake(stream).await?;
     tokio::spawn(async move {
-        if let Err(_) = connection.await {
-
-        }
+        if let Err(_) = connection.await {}
 
         // Connection died
         // Should reconnect and log
-        if let Err(_) = disconnect_tx.send(()).await {
-
-        }
+        if let Err(_) = disconnect_tx.send(()).await {}
     });
 
     Ok(session)
 }
-
-
