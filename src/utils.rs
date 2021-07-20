@@ -5,14 +5,22 @@ const MEGABYTE: f64 = (1024 * 1024) as f64;
 const KILOBYTE: f64 = 1024 as f64;
 
 /// Constructs a new Request of a given host.
-pub fn get_request(uri: &Uri) -> Request<Body> {
+pub fn get_http1_request(uri: &Uri) -> Request<Body> {
     let host = host_header(uri);
 
     Request::builder()
-        .uri(uri)
+        .uri(uri.path())
         .header("Host", host)
         .method("GET")
-        .body(Body::from(""))
+        .body(Body::empty())
+        .expect("Failed to build request")
+}
+
+pub fn get_http2_request(uri: &Uri) -> Request<Body> {
+    Request::builder()
+        .uri(uri)
+        .method("GET")
+        .body(Body::empty())
         .expect("Failed to build request")
 }
 
@@ -44,5 +52,38 @@ pub fn format_data(data_size: f64) -> String {
         format!("{:.2} KB", data_size / KILOBYTE)
     } else {
         format!("{:.2} B", data_size)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum Scheme {
+    HTTP,
+    HTTPS
+}
+
+impl Scheme {
+    pub fn default_port(&self) -> u16 {
+        match self {
+            Scheme::HTTP => 80,
+            Scheme::HTTPS => 443
+        }
+    }
+}
+
+impl From<&str> for Scheme {
+    fn from(s: &str) -> Scheme {
+        match s {
+            "https" => Scheme::HTTPS,
+            _ => Scheme::HTTP
+        }
+    }
+}
+
+impl From<Option<&str>> for Scheme {
+    fn from(s: Option<&str>) -> Scheme {
+        match s {
+            Some("https") => Scheme::HTTPS,
+            _ => Scheme::HTTP
+        }
     }
 }
