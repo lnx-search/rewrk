@@ -21,15 +21,23 @@ use hyper::{Body, StatusCode, Uri};
 
 use tower::{Service, ServiceExt};
 
-struct BenchmarkClient {
-    tls_connector: TlsConnector,
-    time_for: Duration,
-    predicted_size: usize,
+enum SecurityProtocol {
+    Tls(TlsConnector),
+    Plain
+}
+
+struct ParsedUri {
     uri: Uri,
-    scheme: Scheme,
     host: String,
     host_dns: DNSName,
-    port: u16,
+    port: u16
+}
+
+struct BenchmarkClient {
+    protocol: SecurityProtocol,
+    time_for: Duration,
+    predicted_size: usize,
+    parsed_uri: ParsedUri,
     counter: Arc<AtomicUsize>
 }
 
@@ -39,11 +47,16 @@ impl BenchmarkClient {
         uri_string: String,
         predicted_size: usize
     ) -> Result<Self, AnyError> {
-        let tls_connector = tls::http2_alpn_connector()?;
-
         let uri = Uri::from_str(&uri_string)?;
 
         let scheme = Scheme::from(uri.scheme_str());
+
+        let protocol = match scheme {
+            Scheme::HTTP => SecurityProtocol::Plain,
+            Scheme::HTTPS => SecurityProtocol::Tls(
+                tls::http2_alpn_connector()?
+            )
+        };
 
         let host = uri.host().ok_or("cant find host")?.to_owned();
         let host_dns = DNSNameRef::try_from_ascii_str(&host)?.to_owned();
@@ -53,17 +66,20 @@ impl BenchmarkClient {
             None => scheme.default_port()
         };
 
+        let parsed_uri = ParsedUri {
+            uri,
+            host,
+            host_dns,
+            port
+        };
+
         let counter = Arc::new(AtomicUsize::new(0));
 
         Ok(Self {
-            tls_connector,
+            protocol,
             time_for,
             predicted_size,
-            uri,
-            scheme,
-            host,
-            host_dns,
-            port,
+            parsed_uri,
             counter
         })
     }
@@ -108,7 +124,7 @@ impl BenchmarkClient {
         send_request: &mut conn::SendRequest<Body>,
         times: &mut Vec<Duration>
     ) -> Result<(), AnyError> {
-        let req = get_http2_request(&self.uri);
+        let req = get_http2_request(&self.parsed_uri.uri);
 
         let ts = Instant::now();
 
@@ -154,13 +170,13 @@ impl BenchmarkClient {
     }
 
     async fn connect(&self) -> Result<(conn::SendRequest<Body>, JoinHandle<()>), AnyError> {
-        let host_port = format!("{}:{}", self.host, self.port);
+        let host_port = format!("{}:{}", self.parsed_uri.host, self.parsed_uri.port);
 
         let stream = TcpStream::connect(&host_port).await?;
         let stream = CustomTcpStream::new(stream, self.counter.clone());
 
-        match self.scheme {
-            Scheme::HTTP => {
+        match &self.protocol {
+            SecurityProtocol::Plain => {
                 let (send_request, connection) = conn::Builder::new()
                     .http2_only(true)
                     .handshake(stream).await?;
@@ -174,8 +190,8 @@ impl BenchmarkClient {
 
                 Ok((send_request, handle))
             },
-            Scheme::HTTPS => {
-                let stream = self.tls_connector.connect(self.host_dns.as_ref(), stream).await?;
+            SecurityProtocol::Tls(tls_connector) => {
+                let stream = tls_connector.connect(self.parsed_uri.host_dns.as_ref(), stream).await?;
 
                 let (send_request, connection) = conn::Builder::new()
                     .http2_only(true)
