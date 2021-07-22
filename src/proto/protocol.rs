@@ -17,9 +17,9 @@ pub trait HttpProtocol {
 }
 
 #[derive(Clone, Copy)]
-pub struct Http;
+pub struct Http1;
 
-impl HttpProtocol for Http {
+impl HttpProtocol for Http1 {
     fn is_http2(&self) -> bool {
         false
     }

@@ -19,7 +19,7 @@ pub use connector::{
 };
 pub use protocol::{
     HttpProtocol,
-    Http,
+    Http1,
     Http2
 };
 pub use client::{

@@ -6,7 +6,7 @@ use crate::proto::{
     HttpProtocol,
     ParsedUri,
     Scheme,
-    Http,
+    Http1,
     Http2,
     HttpConnector,
     HttpsConnector,
@@ -76,7 +76,7 @@ pub fn get_client(
 }
 
 fn build_http1(builder: ClientBuilder) -> Result<Arc<dyn Client>, AnyError> {
-    let protocol = Http;
+    let protocol = Http1;
 
     match builder.uri_scheme() {
         Scheme::HTTP => build_http(builder, protocol),
