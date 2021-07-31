@@ -1,5 +1,5 @@
+use anyhow::{Error, Result};
 use colored::*;
-use anyhow::{Result, Error};
 use std::fmt::Display;
 use std::time::Duration;
 
@@ -49,7 +49,7 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 
         if let Err(e) = rt.block_on(run(settings.clone())) {
             eprintln!("failed to run benchmark round due to error: {:?}", e);
-            return
+            return;
         }
 
         // Adds a line separator between rounds unless it's formatting
@@ -83,8 +83,7 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
 
     let handles = match handles {
         Ok(v) => v,
-        Err(e) =>
-            return Err(Error::msg(format!("error parsing uri: {}", e))),
+        Err(e) => return Err(Error::msg(format!("error parsing uri: {}", e))),
     };
 
     if !settings.display_json {
@@ -100,14 +99,13 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     for handle in handles {
         let result = match handle.await {
             Ok(r) => r,
-            Err(e) =>
-                return Err(Error::msg(format!("error processing results: {}", e))),
+            Err(e) => return Err(Error::msg(format!("error processing results: {}", e))),
         };
 
         if let Ok(stats) = result {
             combiner = combiner.combine(stats);
         } else if let Err(e) = result {
-            return Err(Error::msg(format!("error combining results: {}", e)))
+            return Err(Error::msg(format!("error combining results: {}", e)));
         }
     }
 

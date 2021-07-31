@@ -1,6 +1,6 @@
 extern crate clap;
 
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
 use clap::{App, Arg, ArgMatches};
 use regex::Regex;
 use tokio::time::Duration;
