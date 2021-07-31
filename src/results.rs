@@ -139,7 +139,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 99.9 percentile.
     pub fn p999_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.001;
+        let mut len = self.request_times.len() as f64 * 0.001;
+        if len < 1.0 {
+            len = 1.0;
+        }
+
         let p999 = self
             .request_times
             .chunks(len as usize)
@@ -155,7 +159,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 99 percentile.
     pub fn p99_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.01;
+        let mut len = self.request_times.len() as f64 * 0.01;
+        if len < 1.0 {
+            len = 1.0;
+        }
+
         let p99 = self
             .request_times
             .chunks(len as usize)
@@ -171,7 +179,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 95 percentile.
     pub fn p95_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.05;
+        let mut len = self.request_times.len() as f64 * 0.05;
+        if len < 1.0 {
+            len = 1.0;
+        }
+
         let p95 = self
             .request_times
             .chunks(len as usize)
@@ -187,7 +199,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 90 percentile.
     pub fn p90_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.10;
+        let mut len = self.request_times.len() as f64 * 0.10;
+        if len < 1.0 {
+            len = 1.0;
+        }
+
         let p90 = self
             .request_times
             .chunks(len as usize)
@@ -203,7 +219,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 75 percentile.
     pub fn p75_avg_latency(&mut self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.25;
+        let mut len = self.request_times.len() as f64 * 0.25;
+        if len < 1.0 {
+            len = 1.0;
+        }
+
         let p75 = self
             .request_times
             .chunks(len as usize)
@@ -219,7 +239,11 @@ impl WorkerResult {
 
     /// Works out the average latency of the 50 percentile.
     pub fn p50_avg_latency(&mut self) -> Duration {
-        let len = self.request_times.len() / 2;
+        let mut len = self.request_times.len() / 2;
+        if len == 0 {
+            len = 1;
+        }
+
         let p50 = self
             .request_times
             .chunks(len)
