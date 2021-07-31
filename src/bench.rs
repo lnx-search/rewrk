@@ -142,23 +142,23 @@ fn humanize(time: Duration) -> String {
     let (hours, minutes) = div_mod(minutes, 60);
     let (days, hours) = div_mod(hours, 24);
 
-    let mut human = String::new();
+    let mut human = Vec::new();
 
     if days != 0 {
-        human = format!("{} days, ", days);
+        human.push(format!("{} day(s)", days));
     };
 
     if hours != 0 {
-        human = format!("{}{} hours, ", human, hours);
+        human.push(format!("{} hour(s)", hours));
     };
 
     if minutes != 0 {
-        human = format!("{}{} minutes, ", human, minutes);
+        human.push(format!("{} minute(s)", minutes));
     };
 
     if seconds != 0 {
-        human = format!("{}{} seconds", human, seconds);
+        human.push(format!("{} second(s)", seconds));
     };
 
-    human
+    human.join(", ")
 }
