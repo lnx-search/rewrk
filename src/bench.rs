@@ -62,7 +62,7 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 async fn run(settings: BenchmarkSettings) {
     let predict_size = settings.duration.as_secs() * 10_000;
 
-    let handles = http::create_pool(
+    let handles = http::start_tasks(
         settings.duration,
         settings.connections,
         settings.host.clone(),
@@ -70,6 +70,14 @@ async fn run(settings: BenchmarkSettings) {
         predict_size as usize,
     )
     .await;
+
+    let handles = match handles {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("error parsing uri: {}", e);
+            return;
+        }
+    };
 
     if !settings.display_json {
         println!(
