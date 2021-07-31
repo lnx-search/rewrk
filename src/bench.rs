@@ -1,4 +1,5 @@
 use colored::*;
+use anyhow::{Result, Error};
 use std::fmt::Display;
 use std::time::Duration;
 
@@ -41,9 +42,15 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
     let rt = runtime::get_rt(settings.threads);
     let rounds = settings.rounds;
     let is_json = settings.display_json;
-    for _ in 0..rounds {
+    for i in 0..rounds {
+        if !is_json {
+            println!("Beginning round {}...", i + 1);
+        }
+
         rt.block_on(run(settings.clone()));
 
+        // Adds a line separator between rounds unless it's formatting
+        // as a json, for readability.
         if !is_json {
             println!();
         };
@@ -59,7 +66,7 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 /// extracted from the handle.
 ///
 /// The results are then merged into a single set of averages across workers.
-async fn run(settings: BenchmarkSettings) {
+async fn run(settings: BenchmarkSettings) -> Result<()> {
     let predict_size = settings.duration.as_secs() * 10_000;
 
     let handles = http::start_tasks(
@@ -73,10 +80,8 @@ async fn run(settings: BenchmarkSettings) {
 
     let handles = match handles {
         Ok(v) => v,
-        Err(e) => {
-            eprintln!("error parsing uri: {}", e);
-            return;
-        }
+        Err(e) =>
+            return Err(Error::msg(format!("error parsing uri: {}", e))),
     };
 
     if !settings.display_json {
@@ -92,23 +97,20 @@ async fn run(settings: BenchmarkSettings) {
     for handle in handles {
         let result = match handle.await {
             Ok(r) => r,
-            Err(e) => {
-                eprintln!("error processing results: {}", e);
-                return;
-            }
+            Err(e) =>
+                return Err(Error::msg(format!("error processing results: {}", e))),
         };
 
         if let Ok(stats) = result {
             combiner = combiner.combine(stats);
         } else if let Err(e) = result {
-            eprintln!("error processing results {}", e);
-            return;
+            return Err(Error::msg(format!("error combining results: {}", e)))
         }
     }
 
     if settings.display_json {
         combiner.display_json();
-        return;
+        return Ok(());
     }
 
     combiner.display_latencies();
@@ -118,6 +120,8 @@ async fn run(settings: BenchmarkSettings) {
     if settings.display_percentile {
         combiner.display_percentile_table();
     }
+
+    Ok(())
 }
 
 /// Uber lazy way of just stringing everything and limiting it to 2 d.p
