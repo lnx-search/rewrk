@@ -17,19 +17,19 @@ pub enum BenchType {
     HTTP2,
 }
 
-pub async fn create_pool(
+pub async fn start_tasks(
     time_for: Duration,
     connections: usize,
     uri_string: String,
     bench_type: BenchType,
     predicted_size: usize,
-) -> Vec<Handle> {
+) -> Result<Vec<Handle>, AnyError> {
     let client = proto::parse::get_client(
         time_for,
         uri_string,
         bench_type,
         predicted_size
-    ).expect("bad uri");
+    )?;
 
     let mut handles: Vec<Handle> = Vec::with_capacity(connections);
 
@@ -39,5 +39,5 @@ pub async fn create_pool(
         handles.push(handle);
     }
 
-    handles
+    Ok(handles)
 }
