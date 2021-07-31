@@ -17,7 +17,7 @@ use crate::http::BenchType;
 
 /// Matches a string like '12d 24h 5m 45s' to a regex capture.
 static DURATION_MATCH: &str =
-    "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
+    "(?P<days>[0-9]+)d|(?P<hours>[0-9]+)h|(?P<minutes>[0-9]+)m|(?P<seconds>[0-9]+)s";
 
 /// ReWrk
 ///
@@ -63,7 +63,7 @@ fn main() {
     let duration = match parse_duration(duration) {
         Ok(dur) => dur,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("failed to parse duration parameter: {}", e);
             return;
         }
     };
@@ -101,22 +101,22 @@ fn parse_duration(duration: &str) -> Result<Duration> {
     let re = Regex::new(DURATION_MATCH).unwrap();
     for cap in re.captures_iter(duration) {
         let add_to = if let Some(days) = cap.name("days") {
-            let days = days.as_str().parse::<u64>().unwrap();
+            let days = days.as_str().parse::<u64>()?;
 
             let seconds = days * 24 * 60 * 60;
             Duration::from_secs(seconds)
         } else if let Some(hours) = cap.name("hours") {
-            let hours = hours.as_str().parse::<u64>().unwrap();
+            let hours = hours.as_str().parse::<u64>()?;
 
             let seconds = hours * 60 * 60;
             Duration::from_secs(seconds)
         } else if let Some(minutes) = cap.name("minutes") {
-            let minutes = minutes.as_str().parse::<u64>().unwrap();
+            let minutes = minutes.as_str().parse::<u64>()?;
 
             let seconds = minutes * 60;
             Duration::from_secs(seconds)
         } else if let Some(seconds) = cap.name("seconds") {
-            let seconds = seconds.as_str().parse::<u64>().unwrap();
+            let seconds = seconds.as_str().parse::<u64>()?;
 
             Duration::from_secs(seconds)
         } else {
