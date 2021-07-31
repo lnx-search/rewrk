@@ -1,18 +1,18 @@
 use crate::error::AnyError;
-use crate::utils::BoxedFuture;
-use crate::proto::uri::ParsedUri;
-use crate::proto::{Connect, HttpProtocol, Connection};
 use crate::proto::tcp_stream::CustomTcpStream;
+use crate::proto::uri::ParsedUri;
+use crate::proto::{Connect, Connection, HttpProtocol};
 use crate::results::WorkerResult;
+use crate::utils::BoxedFuture;
 
-use std::time::{Duration, Instant};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use tokio::net::TcpStream;
 
-use hyper::{Body, StatusCode};
 use hyper::client::conn;
+use hyper::{Body, StatusCode};
 
 use tower::{Service, ServiceExt};
 
@@ -25,13 +25,13 @@ pub struct BenchmarkClient<C, P> {
     protocol: P,
     time_for: Duration,
     predicted_size: usize,
-    parsed_uri: ParsedUri
+    parsed_uri: ParsedUri,
 }
 
 impl<C, P> Client for BenchmarkClient<C, P>
 where
     C: Connect + Send + Sync + 'static,
-    P: HttpProtocol + Copy + Send + Sync + 'static
+    P: HttpProtocol + Copy + Send + Sync + 'static,
 {
     fn start_instance(self: Arc<Self>) -> BoxedFuture<'static, Result<WorkerResult, AnyError>> {
         Box::pin(self.start_ins())
@@ -41,21 +41,21 @@ where
 impl<C, P> BenchmarkClient<C, P>
 where
     C: Connect + Send + Sync + 'static,
-    P: HttpProtocol + Copy + Send + Sync + 'static
+    P: HttpProtocol + Copy + Send + Sync + 'static,
 {
     pub fn new(
         connector: C,
         protocol: P,
         time_for: Duration,
         predicted_size: usize,
-        parsed_uri: ParsedUri
+        parsed_uri: ParsedUri,
     ) -> Self {
         Self {
             connector,
             protocol,
             time_for,
             predicted_size,
-            parsed_uri
+            parsed_uri,
         }
     }
 
@@ -85,7 +85,7 @@ where
         let result = WorkerResult {
             total_times: vec![time_taken],
             request_times: times,
-            buffer_sizes: vec![counter.load(Ordering::Acquire)]
+            buffer_sizes: vec![counter.load(Ordering::Acquire)],
         };
 
         Ok(result)
@@ -95,7 +95,7 @@ where
     async fn bench_request(
         &self,
         send_request: &mut conn::SendRequest<Body>,
-        times: &mut Vec<Duration>
+        times: &mut Vec<Duration>,
     ) -> Result<(), AnyError> {
         let req = self.protocol.get_request(&self.parsed_uri.uri);
 
@@ -107,7 +107,7 @@ where
 
         let resp = match send_request.call(req).await {
             Ok(v) => v,
-            Err(_) => return Ok(())
+            Err(_) => return Ok(()),
         };
 
         let took = ts.elapsed();
@@ -117,7 +117,7 @@ where
 
         let _buff = match hyper::body::to_bytes(resp).await {
             Ok(v) => v,
-            Err(_) => return Ok(())
+            Err(_) => return Ok(()),
         };
 
         times.push(took);
@@ -129,14 +129,14 @@ where
         &self,
         start: Instant,
         time_for: Duration,
-        counter: &Arc<AtomicUsize>
+        counter: &Arc<AtomicUsize>,
     ) -> Result<Connection, AnyError> {
         while start.elapsed() < time_for {
             let res = self.connect(counter).await;
 
             match res {
                 Ok(val) => return Ok(val),
-                Err(_) => ()
+                Err(_) => (),
             }
         }
 

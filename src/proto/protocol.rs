@@ -1,5 +1,5 @@
-use hyper::{Request, Body, Uri};
 use http::request;
+use hyper::{Body, Request, Uri};
 
 pub trait HttpProtocol {
     fn is_http2(&self) -> bool;
@@ -7,8 +7,7 @@ pub trait HttpProtocol {
     fn request_builder(&self, uri: &Uri) -> request::Builder;
 
     fn get_request(&self, uri: &Uri) -> Request<Body> {
-        self
-            .request_builder(uri)
+        self.request_builder(uri)
             .body(Body::empty())
             .expect("bad uri")
     }
@@ -27,9 +26,7 @@ impl HttpProtocol for Http1 {
     fn request_builder(&self, uri: &Uri) -> request::Builder {
         let host = host_header(uri);
 
-        Request::builder()
-            .uri(uri.path())
-            .header("Host", host)
+        Request::builder().uri(uri.path()).header("Host", host)
     }
 
     fn alpn_protocols(&self) -> Vec<Vec<u8>> {
@@ -46,8 +43,7 @@ impl HttpProtocol for Http2 {
     }
 
     fn request_builder(&self, uri: &Uri) -> request::Builder {
-        Request::builder()
-            .uri(uri)
+        Request::builder().uri(uri)
     }
 
     fn alpn_protocols(&self) -> Vec<Vec<u8>> {

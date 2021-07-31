@@ -8,14 +8,14 @@ use hyper::Uri;
 #[derive(Clone, Copy)]
 pub enum Scheme {
     HTTP,
-    HTTPS
+    HTTPS,
 }
 
 impl Scheme {
     pub fn default_port(&self) -> u16 {
         match self {
             Scheme::HTTP => 80,
-            Scheme::HTTPS => 443
+            Scheme::HTTPS => 443,
         }
     }
 }
@@ -24,7 +24,7 @@ impl From<&str> for Scheme {
     fn from(s: &str) -> Scheme {
         match s {
             "https" => Scheme::HTTPS,
-            _ => Scheme::HTTP
+            _ => Scheme::HTTP,
         }
     }
 }
@@ -33,7 +33,7 @@ impl From<Option<&str>> for Scheme {
     fn from(s: Option<&str>) -> Scheme {
         match s {
             Some("https") => Scheme::HTTPS,
-            _ => Scheme::HTTP
+            _ => Scheme::HTTP,
         }
     }
 }
@@ -42,7 +42,7 @@ pub struct ParsedUri {
     pub uri: Uri,
     pub scheme: Scheme,
     pub host: String,
-    pub port: u16
+    pub port: u16,
 }
 
 impl TryFrom<&str> for ParsedUri {
@@ -57,14 +57,14 @@ impl TryFrom<&str> for ParsedUri {
 
         let port = match uri.port_u16() {
             Some(port) => port,
-            None => scheme.default_port()
+            None => scheme.default_port(),
         };
 
         Ok(ParsedUri {
             uri,
             scheme,
             host,
-            port
+            port,
         })
     }
 }

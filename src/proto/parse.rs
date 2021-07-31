@@ -1,16 +1,8 @@
 use crate::error::AnyError;
 use crate::http::BenchType;
 use crate::proto::{
-    Client,
-    Connect,
-    HttpProtocol,
-    ParsedUri,
-    Scheme,
-    Http1,
-    Http2,
-    HttpConnector,
-    HttpsConnector,
-    BenchmarkClient
+    BenchmarkClient, Client, Connect, Http1, Http2, HttpConnector, HttpProtocol, HttpsConnector,
+    ParsedUri, Scheme,
 };
 
 use std::convert::TryFrom;
@@ -20,19 +12,15 @@ use std::time::Duration;
 struct ClientBuilder {
     time_for: Duration,
     predicted_size: usize,
-    parsed_uri: ParsedUri
+    parsed_uri: ParsedUri,
 }
 
 impl ClientBuilder {
-    fn new(
-        time_for: Duration,
-        predicted_size: usize,
-        parsed_uri: ParsedUri
-    ) -> Self {
+    fn new(time_for: Duration, predicted_size: usize, parsed_uri: ParsedUri) -> Self {
         Self {
             time_for,
             predicted_size,
-            parsed_uri
+            parsed_uri,
         }
     }
 
@@ -47,14 +35,14 @@ impl ClientBuilder {
     fn build<C, P>(self, connector: C, protocol: P) -> BenchmarkClient<C, P>
     where
         C: Connect + Send + Sync + 'static,
-        P: HttpProtocol + Copy + Send + Sync + 'static
+        P: HttpProtocol + Copy + Send + Sync + 'static,
     {
         BenchmarkClient::new(
             connector,
             protocol,
             self.time_for,
             self.predicted_size,
-            self.parsed_uri
+            self.parsed_uri,
         )
     }
 }
@@ -71,7 +59,7 @@ pub fn get_client(
 
     match bench_type {
         BenchType::HTTP1 => build_http1(builder),
-        BenchType::HTTP2 => build_http2(builder)
+        BenchType::HTTP2 => build_http2(builder),
     }
 }
 
@@ -80,40 +68,34 @@ fn build_http1(builder: ClientBuilder) -> Result<Arc<dyn Client>, AnyError> {
 
     match builder.uri_scheme() {
         Scheme::HTTP => build_http(builder, protocol),
-        Scheme::HTTPS => build_https(builder, protocol)
+        Scheme::HTTPS => build_https(builder, protocol),
     }
 }
 
-fn build_http2(builder: ClientBuilder) -> Result<Arc<dyn Client>, AnyError>{
+fn build_http2(builder: ClientBuilder) -> Result<Arc<dyn Client>, AnyError> {
     let protocol = Http2;
 
     match builder.uri_scheme() {
         Scheme::HTTP => build_http(builder, protocol),
-        Scheme::HTTPS => build_https(builder, protocol)
+        Scheme::HTTPS => build_https(builder, protocol),
     }
 }
 
 fn build_http<P>(builder: ClientBuilder, protocol: P) -> Result<Arc<dyn Client>, AnyError>
 where
-    P: HttpProtocol + Copy + Send + Sync + 'static
+    P: HttpProtocol + Copy + Send + Sync + 'static,
 {
-    Ok(Arc::new(builder.build(
-        HttpConnector::new(),
-        protocol
-    )))
+    Ok(Arc::new(builder.build(HttpConnector::new(), protocol)))
 }
 
 fn build_https<P>(builder: ClientBuilder, protocol: P) -> Result<Arc<dyn Client>, AnyError>
 where
-    P: HttpProtocol + Copy + Send + Sync + 'static
+    P: HttpProtocol + Copy + Send + Sync + 'static,
 {
     let host = builder.uri_host().to_owned();
 
     Ok(Arc::new(builder.build(
-        HttpsConnector::new(
-            &host,
-            &protocol.alpn_protocols()
-        )?,
-        protocol
+        HttpsConnector::new(&host, &protocol.alpn_protocols())?,
+        protocol,
     )))
 }

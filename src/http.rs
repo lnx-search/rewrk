@@ -1,7 +1,7 @@
 use tokio::task::JoinHandle;
 
-use crate::proto;
 use crate::error::AnyError;
+use crate::proto;
 use crate::results::WorkerResult;
 use tokio::time::Duration;
 
@@ -24,12 +24,7 @@ pub async fn start_tasks(
     bench_type: BenchType,
     predicted_size: usize,
 ) -> Result<Vec<Handle>, AnyError> {
-    let client = proto::parse::get_client(
-        time_for,
-        uri_string,
-        bench_type,
-        predicted_size
-    )?;
+    let client = proto::parse::get_client(time_for, uri_string, bench_type, predicted_size)?;
 
     let mut handles: Vec<Handle> = Vec::with_capacity(connections);
 

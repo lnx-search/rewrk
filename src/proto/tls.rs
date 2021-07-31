@@ -3,8 +3,8 @@ use crate::error::AnyError;
 use std::sync::Arc;
 
 use rustls::ClientConfig;
-use tokio_rustls::TlsConnector;
 use rustls_native_certs::load_native_certs;
+use tokio_rustls::TlsConnector;
 
 pub fn connector_from_alpn(alpn: &[Vec<u8>]) -> Result<TlsConnector, AnyError> {
     let mut config = ClientConfig::new();
