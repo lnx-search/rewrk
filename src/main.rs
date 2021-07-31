@@ -1,5 +1,6 @@
 extern crate clap;
-use crate::http::BenchType;
+
+use anyhow::{Result, Error};
 use clap::{App, Arg, ArgMatches};
 use regex::Regex;
 use tokio::time::Duration;
@@ -11,6 +12,8 @@ mod proto;
 mod results;
 mod runtime;
 mod utils;
+
+use crate::http::BenchType;
 
 /// Matches a string like '12d 24h 5m 45s' to a regex capture.
 static DURATION_MATCH: &str =
@@ -26,7 +29,7 @@ fn main() {
     let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
-            println!("Invalid parameter for 'threads' given, input type must be a integer.");
+            eprintln!("invalid parameter for 'threads' given, input type must be a integer.");
             return;
         }
     };
@@ -34,7 +37,7 @@ fn main() {
     let conns: usize = match args.value_of("connections").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
-            println!("Invalid parameter for 'connections' given, input type must be a integer.");
+            eprintln!("invalid parameter for 'connections' given, input type must be a integer.");
             return;
         }
     };
@@ -42,7 +45,7 @@ fn main() {
     let host: &str = match args.value_of("host") {
         Some(v) => v,
         None => {
-            println!("Missing 'host' parameter.");
+            eprintln!("missing 'host' parameter.");
             return;
         }
     };
@@ -92,7 +95,7 @@ fn main() {
 ///
 /// If no matches are found for the string or a invalid match
 /// is captured a error message returned and displayed.
-fn parse_duration(duration: &str) -> Result<Duration, String> {
+fn parse_duration(duration: &str) -> Result<Duration> {
     let mut dur = Duration::default();
 
     let re = Regex::new(DURATION_MATCH).unwrap();
@@ -117,17 +120,17 @@ fn parse_duration(duration: &str) -> Result<Duration, String> {
 
             Duration::from_secs(seconds)
         } else {
-            return Err(format!("Invalid match: {:?}", cap));
+            return Err(Error::msg(format!("invalid match: {:?}", cap)));
         };
 
         dur += add_to
     }
 
     if dur.as_secs() <= 0 {
-        return Err(format!(
-            "Failed to extract any valid duration from {}",
+        return Err(Error::msg(format!(
+            "failed to extract any valid duration from {}",
             duration
-        ));
+        )));
     }
 
     Ok(dur)
