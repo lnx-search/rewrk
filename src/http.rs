@@ -1,9 +1,9 @@
 use tokio::task::JoinHandle;
+use tokio::time::Duration;
 
 use crate::error::AnyError;
 use crate::proto;
 use crate::results::WorkerResult;
-use tokio::time::Duration;
 
 pub type Handle = JoinHandle<Result<WorkerResult, AnyError>>;
 
