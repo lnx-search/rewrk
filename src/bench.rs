@@ -47,7 +47,10 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
             println!("Beginning round {}...", i + 1);
         }
 
-        rt.block_on(run(settings.clone()));
+        if let Err(e) = rt.block_on(run(settings.clone())) {
+            eprintln!("failed to run benchmark round due to error: {:?}", e);
+            return
+        }
 
         // Adds a line separator between rounds unless it's formatting
         // as a json, for readability.
