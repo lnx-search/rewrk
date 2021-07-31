@@ -1,5 +1,6 @@
 extern crate clap;
-use crate::http::BenchType;
+
+use anyhow::{Error, Result};
 use clap::{App, Arg, ArgMatches};
 use regex::Regex;
 use tokio::time::Duration;
@@ -12,9 +13,11 @@ mod results;
 mod runtime;
 mod utils;
 
+use crate::http::BenchType;
+
 /// Matches a string like '12d 24h 5m 45s' to a regex capture.
 static DURATION_MATCH: &str =
-    "(?P<days>[0-9]*)d|(?P<hours>[0-9]*)h|(?P<minutes>[0-9]*)m|(?P<seconds>[0-9]*)s";
+    "(?P<days>[0-9]+)d|(?P<hours>[0-9]+)h|(?P<minutes>[0-9]+)m|(?P<seconds>[0-9]+)s";
 
 /// ReWrk
 ///
@@ -26,7 +29,7 @@ fn main() {
     let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
-            println!("Invalid parameter for 'threads' given, input type must be a integer.");
+            eprintln!("invalid parameter for 'threads' given, input type must be a integer.");
             return;
         }
     };
@@ -34,7 +37,7 @@ fn main() {
     let conns: usize = match args.value_of("connections").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
-            println!("Invalid parameter for 'connections' given, input type must be a integer.");
+            eprintln!("invalid parameter for 'connections' given, input type must be a integer.");
             return;
         }
     };
@@ -42,7 +45,7 @@ fn main() {
     let host: &str = match args.value_of("host") {
         Some(v) => v,
         None => {
-            println!("Missing 'host' parameter.");
+            eprintln!("missing 'host' parameter.");
             return;
         }
     };
@@ -60,7 +63,7 @@ fn main() {
     let duration = match parse_duration(duration) {
         Ok(dur) => dur,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("failed to parse duration parameter: {}", e);
             return;
         }
     };
@@ -92,42 +95,42 @@ fn main() {
 ///
 /// If no matches are found for the string or a invalid match
 /// is captured a error message returned and displayed.
-fn parse_duration(duration: &str) -> Result<Duration, String> {
+fn parse_duration(duration: &str) -> Result<Duration> {
     let mut dur = Duration::default();
 
     let re = Regex::new(DURATION_MATCH).unwrap();
     for cap in re.captures_iter(duration) {
         let add_to = if let Some(days) = cap.name("days") {
-            let days = days.as_str().parse::<u64>().unwrap();
+            let days = days.as_str().parse::<u64>()?;
 
             let seconds = days * 24 * 60 * 60;
             Duration::from_secs(seconds)
         } else if let Some(hours) = cap.name("hours") {
-            let hours = hours.as_str().parse::<u64>().unwrap();
+            let hours = hours.as_str().parse::<u64>()?;
 
             let seconds = hours * 60 * 60;
             Duration::from_secs(seconds)
         } else if let Some(minutes) = cap.name("minutes") {
-            let minutes = minutes.as_str().parse::<u64>().unwrap();
+            let minutes = minutes.as_str().parse::<u64>()?;
 
             let seconds = minutes * 60;
             Duration::from_secs(seconds)
         } else if let Some(seconds) = cap.name("seconds") {
-            let seconds = seconds.as_str().parse::<u64>().unwrap();
+            let seconds = seconds.as_str().parse::<u64>()?;
 
             Duration::from_secs(seconds)
         } else {
-            return Err(format!("Invalid match: {:?}", cap));
+            return Err(Error::msg(format!("invalid match: {:?}", cap)));
         };
 
         dur += add_to
     }
 
     if dur.as_secs() <= 0 {
-        return Err(format!(
-            "Failed to extract any valid duration from {}",
+        return Err(Error::msg(format!(
+            "failed to extract any valid duration from {}",
             duration
-        ));
+        )));
     }
 
     Ok(dur)

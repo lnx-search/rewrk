@@ -6,6 +6,25 @@ use tokio::time::Duration;
 
 use crate::utils::format_data;
 
+fn get_percentile(request_times: &Vec<Duration>, pct: f64) -> Duration {
+    let mut len = request_times.len() as f64 * pct;
+    if len < 1.0 {
+        len = 1.0;
+    }
+
+    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let pct = request_times
+        .chunks(len as usize)
+        .next()
+        .expect(&e);
+
+    let total: f64 = pct.iter().map(|dur| dur.as_secs_f64()).sum();
+
+    let avg = total / pct.len() as f64;
+
+    Duration::from_secs_f64(avg)
+}
+
 /// Contains and handles results from the workers
 pub struct WorkerResult {
     /// The total time taken for each worker.
@@ -139,98 +158,32 @@ impl WorkerResult {
 
     /// Works out the average latency of the 99.9 percentile.
     pub fn p999_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.001;
-        let p999 = self
-            .request_times
-            .chunks(len as usize)
-            .next()
-            .expect("Failed to calculate P99.9 avg latency");
-
-        let total: f64 = p999.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p999.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.001)
     }
 
     /// Works out the average latency of the 99 percentile.
     pub fn p99_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.01;
-        let p99 = self
-            .request_times
-            .chunks(len as usize)
-            .next()
-            .expect("Failed to calculate P99 avg latency");
-
-        let total: f64 = p99.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p99.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.01)
     }
 
     /// Works out the average latency of the 95 percentile.
     pub fn p95_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.05;
-        let p95 = self
-            .request_times
-            .chunks(len as usize)
-            .next()
-            .expect("Failed to calculate P95 avg latency");
-
-        let total: f64 = p95.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p95.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.05)
     }
 
     /// Works out the average latency of the 90 percentile.
     pub fn p90_avg_latency(&self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.10;
-        let p90 = self
-            .request_times
-            .chunks(len as usize)
-            .next()
-            .expect("Failed to calculate P90 avg latency");
-
-        let total: f64 = p90.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p90.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.1)
     }
 
     /// Works out the average latency of the 75 percentile.
     pub fn p75_avg_latency(&mut self) -> Duration {
-        let len = self.request_times.len() as f64 * 0.25;
-        let p75 = self
-            .request_times
-            .chunks(len as usize)
-            .next()
-            .expect("Failed to calculate P75 avg latency");
-
-        let total: f64 = p75.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p75.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.25)
     }
 
     /// Works out the average latency of the 50 percentile.
     pub fn p50_avg_latency(&mut self) -> Duration {
-        let len = self.request_times.len() / 2;
-        let p50 = self
-            .request_times
-            .chunks(len)
-            .next()
-            .expect("Failed to calculate P50 avg latency");
-
-        let total: f64 = p50.iter().map(|dur| dur.as_secs_f64()).sum();
-
-        let avg = total / p50.len() as f64;
-
-        Duration::from_secs_f64(avg)
+        get_percentile(&self.request_times, 0.5)
     }
 
     pub fn display_latencies(&mut self) {
