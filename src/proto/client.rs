@@ -63,7 +63,12 @@ where
         let start = Instant::now();
         let counter = Arc::new(AtomicUsize::new(0));
 
-        let mut connection = self.connect_retry(start, self.time_for, &counter).await?;
+        let mut connection = match self.connect_retry(start, self.time_for, &counter).await {
+            Ok(conn) => conn,
+            Err(_) => {
+                return Ok(WorkerResult::default());
+            }
+        };
 
         let mut times: Vec<Duration> = Vec::with_capacity(self.predicted_size);
 
@@ -75,7 +80,11 @@ where
                     }
                 },
                 _ = (&mut connection.handle) => {
-                    connection = self.connect_retry(start, self.time_for, &counter).await?;
+                    match self.connect_retry(start, self.time_for, &counter).await {
+                        Ok(conn) => connection = conn,
+                        // Errors are ignored currently.
+                        Err(_) => break,
+                    }
                 }
             };
         }

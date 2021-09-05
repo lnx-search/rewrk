@@ -26,6 +26,7 @@ fn get_percentile(request_times: &Vec<Duration>, pct: f64) -> Duration {
 }
 
 /// Contains and handles results from the workers
+#[derive(Default)]
 pub struct WorkerResult {
     /// The total time taken for each worker.
     pub total_times: Vec<Duration>,
