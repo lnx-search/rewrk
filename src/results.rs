@@ -13,10 +13,7 @@ fn get_percentile(request_times: &Vec<Duration>, pct: f64) -> Duration {
     }
 
     let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
-    let pct = request_times
-        .chunks(len as usize)
-        .next()
-        .expect(&e);
+    let pct = request_times.chunks(len as usize).next().expect(&e);
 
     let total: f64 = pct.iter().map(|dur| dur.as_secs_f64()).sum();
 
