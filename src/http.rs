@@ -24,7 +24,7 @@ pub async fn start_tasks(
     bench_type: BenchType,
     predicted_size: usize,
 ) -> Result<Vec<Handle>, AnyError> {
-    let client = proto::parse::get_client(time_for, uri_string, bench_type, predicted_size)?;
+    let client = proto::parse::get_client(time_for, uri_string, bench_type, predicted_size).await?;
 
     let mut handles: Vec<Handle> = Vec::with_capacity(connections);
 

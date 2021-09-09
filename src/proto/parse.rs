@@ -5,7 +5,6 @@ use crate::proto::{
     ParsedUri, Scheme,
 };
 
-use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,7 +24,7 @@ impl ClientBuilder {
     }
 
     fn uri_host(&self) -> &str {
-        &self.parsed_uri.host
+        &self.parsed_uri.uri.host().unwrap()
     }
 
     fn uri_scheme(&self) -> Scheme {
@@ -47,13 +46,13 @@ impl ClientBuilder {
     }
 }
 
-pub fn get_client(
+pub async fn get_client(
     time_for: Duration,
     uri_string: String,
     bench_type: BenchType,
     predicted_size: usize,
 ) -> Result<Arc<dyn Client>, AnyError> {
-    let parsed_uri = ParsedUri::try_from(uri_string)?;
+    let parsed_uri = ParsedUri::parse_and_lookup(&uri_string).await?;
 
     let builder = ClientBuilder::new(time_for, predicted_size, parsed_uri);
 
