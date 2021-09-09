@@ -1,6 +1,6 @@
 use crate::error::AnyError;
 
-use std::convert::TryFrom;
+use std::net::SocketAddr;
 use std::str::FromStr;
 
 use hyper::Uri;
@@ -41,46 +41,42 @@ impl From<Option<&str>> for Scheme {
 pub struct ParsedUri {
     pub uri: Uri,
     pub scheme: Scheme,
-    pub host: String,
-    pub port: u16,
+    pub addr: SocketAddr,
 }
 
-impl TryFrom<&str> for ParsedUri {
-    type Error = AnyError;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
+impl ParsedUri {
+    pub async fn parse_and_lookup(s: &str) -> Result<Self, AnyError> {
         let uri = Uri::from_str(&s)?;
 
         let scheme = Scheme::from(uri.scheme_str());
 
-        let host = uri.host().ok_or("cant find host")?.to_owned();
+        let host = uri.host().ok_or("cant find host")?;
 
         let port = match uri.port_u16() {
             Some(port) => port,
             None => scheme.default_port(),
         };
 
-        Ok(ParsedUri {
-            uri,
-            scheme,
-            host,
-            port,
-        })
+        let addr = get_preferred_ip(host, port).await?;
+
+        Ok(ParsedUri { uri, scheme, addr })
     }
 }
 
-impl TryFrom<String> for ParsedUri {
-    type Error = AnyError;
+async fn get_preferred_ip(host: &str, port: u16) -> Result<SocketAddr, AnyError> {
+    let mut addrs = tokio::net::lookup_host((host, port)).await?;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        Self::try_from(s.as_str())
+    let mut res = Err("host lookup failed".into());
+
+    while let Some(addr) = addrs.next() {
+        if addr.is_ipv4() {
+            return Ok(addr);
+        }
+
+        if res.is_err() {
+            res = Ok(addr);
+        }
     }
-}
 
-impl TryFrom<&String> for ParsedUri {
-    type Error = AnyError;
-
-    fn try_from(s: &String) -> Result<Self, Self::Error> {
-        Self::try_from(s.as_str())
-    }
+    res
 }

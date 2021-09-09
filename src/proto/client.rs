@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use tokio::net::TcpStream;
+use tokio::time::sleep;
 
 use hyper::client::conn;
 use hyper::{Body, StatusCode};
@@ -147,15 +148,16 @@ where
                 Ok(val) => return Ok(val),
                 Err(_) => (),
             }
+
+            sleep(Duration::from_millis(200)).await;
         }
 
         Err("connection closed".into())
     }
 
     async fn connect(&self, counter: &Arc<AtomicUsize>) -> Result<Connection, AnyError> {
-        let host_port = format!("{}:{}", self.parsed_uri.host, self.parsed_uri.port);
+        let stream = TcpStream::connect(&self.parsed_uri.addr).await?;
 
-        let stream = TcpStream::connect(&host_port).await?;
         let stream = CustomTcpStream::new(stream, counter.clone());
 
         let connection = self.connector.handshake(stream, self.protocol).await?;
