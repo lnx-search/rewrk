@@ -6,7 +6,7 @@ use tokio::time::Duration;
 
 use crate::utils::format_data;
 
-fn get_percentile(request_times: &Vec<Duration>, pct: f64) -> Duration {
+fn get_percentile(request_times: &[Duration], pct: f64) -> Duration {
     let mut len = request_times.len() as f64 * pct;
     if len < 1.0 {
         len = 1.0;
@@ -99,28 +99,12 @@ impl WorkerResult {
 
     /// Calculates the max latency overall from all requests.
     pub fn max_request_latency(&self) -> Duration {
-        let max = self
-            .request_times
-            .iter()
-            .map(|dur| dur)
-            .max()
-            .map(|res| *res)
-            .unwrap_or(Duration::default());
-
-        max
+        self.request_times.iter().max().copied().unwrap_or_default()
     }
 
     /// Calculates the min latency overall from all requests.
     pub fn min_request_latency(&self) -> Duration {
-        let min = self
-            .request_times
-            .iter()
-            .map(|dur| dur)
-            .min()
-            .map(|res| *res)
-            .unwrap_or(Duration::default());
-
-        min
+        self.request_times.iter().min().copied().unwrap_or_default()
     }
 
     /// Calculates the variance between all requests
@@ -185,7 +169,7 @@ impl WorkerResult {
     }
 
     pub fn display_latencies(&mut self) {
-        let modified = 1000 as f64;
+        let modified = 1000_f64;
         let avg = self.avg_request_latency().as_secs_f64() * modified;
         let max = self.max_request_latency().as_secs_f64() * modified;
         let min = self.min_request_latency().as_secs_f64() * modified;
@@ -230,7 +214,7 @@ impl WorkerResult {
         println!("  Transfer:");
         println!(
             "    Total: {:^7} Transfer Rate: {:^7}",
-            format!("{}", display_total).as_str().bright_cyan(),
+            display_total.as_str().bright_cyan(),
             format!("{}/Sec", display_rate).as_str().bright_cyan()
         )
     }
@@ -248,7 +232,7 @@ impl WorkerResult {
 
         println!("+ {:-^15} + {:-^15} +", "", "",);
 
-        let modifier = 1000 as f64;
+        let modifier = 1000_f64;
         println!(
             "| {:^15} | {:^15} |",
             "99.9%",
@@ -284,7 +268,7 @@ impl WorkerResult {
     }
 
     pub fn display_json(&self) {
-        let modified = 1000 as f64;
+        let modified = 1000_f64;
         let avg = self.avg_request_latency().as_secs_f64() * modified;
         let max = self.max_request_latency().as_secs_f64() * modified;
         let min = self.min_request_latency().as_secs_f64() * modified;

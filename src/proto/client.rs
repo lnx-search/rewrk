@@ -111,7 +111,7 @@ where
 
         let ts = Instant::now();
 
-        if let Err(_) = send_request.ready().await {
+        if send_request.ready().await.is_err() {
             return Ok(());
         }
 
@@ -144,9 +144,8 @@ where
         while start.elapsed() < time_for {
             let res = self.connect(counter).await;
 
-            match res {
-                Ok(val) => return Ok(val),
-                Err(_) => (),
+            if let Ok(val) = res {
+                return Ok(val);
             }
 
             sleep(Duration::from_millis(200)).await;

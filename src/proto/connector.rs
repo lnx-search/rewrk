@@ -71,7 +71,7 @@ impl Connect for HttpsConnector {
                 .connect(self.domain.as_ref(), stream)
                 .await?;
 
-            Ok(handshake(stream, protocol).await?)
+            handshake(stream, protocol).await
         })
     }
 }
@@ -87,7 +87,8 @@ where
         .await?;
 
     let handle = tokio::spawn(async move {
-        if let Err(_) = connection.await {}
+        // TODO: handle error
+        let _ = connection.await;
 
         // Connection died
         // Should reconnect and log

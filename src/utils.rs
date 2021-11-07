@@ -5,7 +5,7 @@ pub type BoxedFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 const GIGABYTE: f64 = (1024 * 1024 * 1024) as f64;
 const MEGABYTE: f64 = (1024 * 1024) as f64;
-const KILOBYTE: f64 = 1024 as f64;
+const KILOBYTE: f64 = 1024_f64;
 
 /// Dirt simple div mod function.
 pub fn div_mod(main: u64, divider: u64) -> (u64, u64) {
