@@ -126,7 +126,7 @@ fn parse_duration(duration: &str) -> Result<Duration> {
         dur += add_to
     }
 
-    if dur.as_secs() <= 0 {
+    if dur.as_secs() == 0 {
         return Err(Error::msg(format!(
             "failed to extract any valid duration from {}",
             duration

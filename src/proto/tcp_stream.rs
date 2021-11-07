@@ -17,7 +17,7 @@ impl CustomTcpStream {
     pub fn new(stream: TcpStream, counter: Arc<AtomicUsize>) -> Self {
         Self {
             inner: stream,
-            counter: counter,
+            counter,
         }
     }
 }

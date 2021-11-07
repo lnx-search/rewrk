@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use hyper::Uri;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy)]
 pub enum Scheme {
     HTTP,
@@ -46,7 +47,7 @@ pub struct ParsedUri {
 
 impl ParsedUri {
     pub async fn parse_and_lookup(s: &str) -> Result<Self, AnyError> {
-        let uri = Uri::from_str(&s)?;
+        let uri = Uri::from_str(s)?;
 
         let scheme = Scheme::from(uri.scheme_str());
 
@@ -64,11 +65,11 @@ impl ParsedUri {
 }
 
 async fn get_preferred_ip(host: &str, port: u16) -> Result<SocketAddr, AnyError> {
-    let mut addrs = tokio::net::lookup_host((host, port)).await?;
+    let addrs = tokio::net::lookup_host((host, port)).await?;
 
     let mut res = Err("host lookup failed".into());
 
-    while let Some(addr) = addrs.next() {
+    for addr in addrs {
         if addr.is_ipv4() {
             return Ok(addr);
         }

@@ -24,7 +24,7 @@ impl ClientBuilder {
     }
 
     fn uri_host(&self) -> &str {
-        &self.parsed_uri.uri.host().unwrap()
+        self.parsed_uri.uri.host().unwrap()
     }
 
     fn uri_scheme(&self) -> Scheme {
