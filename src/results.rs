@@ -268,6 +268,27 @@ impl WorkerResult {
     }
 
     pub fn display_json(&self) {
+        // prevent div-by-zero panics
+        if self.total_requests() == 0 {
+            let null = None::<()>;
+
+            let out = json!({
+                "latency_avg": null,
+                "latency_max": null,
+                "latency_min": null,
+                "latency_std_deviation": null,
+
+                "transfer_total": null,
+                "transfer_rate": null,
+
+                "requests_total": 0,
+                "requests_avg": null,
+            });
+
+            println!("{}", out.to_string());
+            return;
+        }
+
         let modified = 1000_f64;
         let avg = self.avg_request_latency().as_secs_f64() * modified;
         let max = self.max_request_latency().as_secs_f64() * modified;
@@ -277,8 +298,8 @@ impl WorkerResult {
         let total = self.total_transfer() as f64;
         let rate = self.avg_transfer();
 
-        let total_transfer = self.total_requests();
-        let avg_transfer = self.avg_request_per_sec();
+        let total_requests = self.total_requests();
+        let avg_request_per_sec = self.avg_request_per_sec();
 
         let out = json!({
             "latency_avg": avg,
@@ -289,8 +310,8 @@ impl WorkerResult {
             "transfer_total": total,
             "transfer_rate": rate,
 
-            "requests_total": total_transfer,
-            "requests_avg": avg_transfer,
+            "requests_total": total_requests,
+            "requests_avg": avg_request_per_sec,
         });
 
         println!("{}", out.to_string())

@@ -114,6 +114,12 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
         return Ok(());
     }
 
+    // prevent div-by-zero panics
+    if combiner.total_requests() == 0 {
+        println!("No requests completed successfully");
+        return Ok(());
+    }
+
     combiner.display_latencies();
     combiner.display_requests();
     combiner.display_transfer();
