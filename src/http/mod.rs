@@ -3,7 +3,7 @@ use self::{
     user_input::{Scheme, UserInput},
 };
 use crate::results::WorkerResult;
-use futures_util::TryFutureExt;
+use futures_util::{stream::FuturesUnordered, TryFutureExt};
 use http::{
     header::{self, HeaderMap},
     Request,
@@ -52,11 +52,11 @@ pub async fn start_tasks(
     uri_string: String,
     bench_type: BenchType,
     _predicted_size: usize,
-) -> anyhow::Result<Vec<Handle>> {
+) -> anyhow::Result<FuturesUnordered<Handle>> {
     let deadline = Instant::now() + time_for;
     let user_input = UserInput::new(bench_type, uri_string).await?;
 
-    let mut handles: Vec<Handle> = Vec::with_capacity(connections);
+    let handles = FuturesUnordered::new();
 
     for _ in 0..connections {
         let handle = tokio::spawn(benchmark(deadline, bench_type, user_input.clone()));

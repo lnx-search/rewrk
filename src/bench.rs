@@ -1,5 +1,6 @@
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Result};
 use colored::*;
+use futures_util::StreamExt;
 use std::fmt::Display;
 use std::time::Duration;
 
@@ -81,9 +82,9 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     )
     .await;
 
-    let handles = match handles {
+    let mut handles = match handles {
         Ok(v) => v,
-        Err(e) => return Err(Error::msg(format!("error parsing uri: {}", e))),
+        Err(e) => return Err(anyhow!("error parsing uri: {}", e)),
     };
 
     if !settings.display_json {
@@ -96,16 +97,10 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     }
 
     let mut combiner = WorkerResult::default();
-    for handle in handles {
-        let result = match handle.await {
-            Ok(r) => r,
-            Err(e) => return Err(Error::msg(format!("error processing results: {}", e))),
-        };
-
-        if let Ok(stats) = result {
-            combiner = combiner.combine(stats);
-        } else if let Err(e) = result {
-            return Err(Error::msg(format!("error combining results: {}", e)));
+    while let Some(result) = handles.next().await {
+        match result.unwrap() {
+            Ok(stats) => combiner = combiner.combine(stats),
+            Err(e) => return Err(anyhow!("error combining results: {}", e)),
         }
     }
 
