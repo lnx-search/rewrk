@@ -43,7 +43,7 @@ impl UserInput {
         let uri = Uri::try_from(string)?;
         let scheme = uri
             .scheme()
-            .ok_or(anyhow!("scheme is not present on uri"))?
+            .ok_or_else(|| anyhow!("scheme is not present on uri"))?
             .as_str();
         let scheme = match scheme {
             "http" => Scheme::Http,
@@ -64,7 +64,7 @@ impl UserInput {
             }
             _ => return Err(anyhow::Error::msg("invalid scheme")),
         };
-        let authority = uri.authority().ok_or(anyhow!("host not present on uri"))?;
+        let authority = uri.authority().ok_or_else(|| anyhow!("host not present on uri"))?;
         let host = authority.host().to_owned();
         let port = authority
             .port_u16()
@@ -80,7 +80,7 @@ impl UserInput {
                 break;
             }
         }
-        let addr = last_addr.ok_or(anyhow!("hostname lookup failed"))?;
+        let addr = last_addr.ok_or_else(|| anyhow!("hostname lookup failed"))?;
 
         Ok(Self {
             addr,

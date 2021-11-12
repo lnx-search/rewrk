@@ -3,6 +3,7 @@ use self::{
     user_input::{Scheme, UserInput},
 };
 use crate::results::WorkerResult;
+use anyhow::anyhow;
 use futures_util::{stream::FuturesUnordered, TryFutureExt};
 use http::{
     header::{self, HeaderMap},
@@ -12,7 +13,7 @@ use hyper::{
     client::conn::{self, SendRequest},
     Body,
 };
-use std::{net::SocketAddr, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, time::Duration};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
@@ -82,7 +83,7 @@ async fn benchmark(
         user_input.host,
     );
 
-    let mut send_request = match timeout_at(deadline, connector.connect()).await {
+    let (mut send_request, mut connection_task) = match timeout_at(deadline, connector.connect()).await {
         Ok(result) => result?,
         Err(_elapsed) => return Ok(WorkerResult::default()),
     };
@@ -95,6 +96,7 @@ async fn benchmark(
     }
 
     let mut request_times = Vec::new();
+    let mut error_map = HashMap::new();
 
     // Benchmark loop.
     // Futures must not be awaited without timeout.
@@ -112,14 +114,43 @@ async fn benchmark(
             // Read response body completely.
             .and_then(|response| hyper::body::to_bytes(response.into_body()));
 
+        // ResponseFuture of send_request might return channel closed error instead of real error
+        // in the case of connection_task being finished. This future will check if connection_task
+        // is finished first.
+        let future = async {
+            tokio::select! {
+                biased;
+                result = (&mut connection_task) => {
+                    match result.unwrap() {
+                        Ok(()) => Err::<_, anyhow::Error>(anyhow!("connection closed")),
+                        Err(e) => Err::<_, anyhow::Error>(anyhow::Error::new(e)),
+                    }
+                },
+                result = future => result.map(|_| ()).map_err(Into::into),
+            }
+        };
+
         let request_start = Instant::now();
 
         // Try to resolve future before benchmark deadline is elapsed.
         if let Ok(result) = timeout_at(deadline, future).await {
-            // TODO: Log errors.
-            if result.is_err() {
-                send_request = match connector.try_connect_until().await {
-                    Ok(v) => v,
+            if let Err(e) = result {
+                let error = e.to_string();
+
+                // Insert/add error string to error log.
+                match error_map.get_mut(&error) {
+                    Some(count) => *count += 1,
+                    None => {
+                        error_map.insert(error, 1);
+                    },
+                }
+
+                // Try reconnecting.
+                match connector.try_connect_until().await {
+                    Ok((sr, task)) => {
+                        send_request = sr;
+                        connection_task = task;
+                    },
                     Err(_elapsed) => break,
                 };
             }
@@ -135,6 +166,7 @@ async fn benchmark(
         total_times: vec![benchmark_start.elapsed()],
         request_times,
         buffer_sizes: vec![connector.get_received_bytes()],
+        error_map,
     })
 }
 
@@ -167,7 +199,7 @@ impl RewrkConnector {
         }
     }
 
-    async fn try_connect_until(&self) -> Result<SendRequest<Body>, Elapsed> {
+    async fn try_connect_until(&self) -> Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>), Elapsed> {
         let future = async {
             loop {
                 if let Ok(v) = self.connect().await {
@@ -181,7 +213,7 @@ impl RewrkConnector {
         timeout_at(self.deadline, future).await
     }
 
-    async fn connect(&self) -> anyhow::Result<SendRequest<Body>> {
+    async fn connect(&self) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)> {
         let mut conn_builder = conn::Builder::new();
 
         if self.bench_type.is_http2() {
@@ -207,11 +239,11 @@ impl RewrkConnector {
     }
 }
 
-async fn handshake<S>(conn_builder: conn::Builder, stream: S) -> anyhow::Result<SendRequest<Body>>
+async fn handshake<S>(conn_builder: conn::Builder, stream: S) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     let (send_request, connection) = conn_builder.handshake(stream).await?;
-    tokio::spawn(connection);
-    Ok(send_request)
+    let connection_task = tokio::spawn(connection);
+    Ok((send_request, connection_task))
 }

@@ -49,7 +49,8 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
         }
 
         if let Err(e) = rt.block_on(run(settings.clone())) {
-            eprintln!("failed to run benchmark round due to error: {:?}", e);
+            eprintln!();
+            eprintln!("{}", e);
             return;
         }
 
@@ -100,7 +101,7 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     while let Some(result) = handles.next().await {
         match result.unwrap() {
             Ok(stats) => combiner = combiner.combine(stats),
-            Err(e) => return Err(anyhow!("error combining results: {}", e)),
+            Err(e) => return Err(anyhow!("connection error: {}", e)),
         }
     }
 
@@ -122,6 +123,9 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     if settings.display_percentile {
         combiner.display_percentile_table();
     }
+
+    // Display errors last.
+    combiner.display_errors();
 
     Ok(())
 }

@@ -2,6 +2,7 @@
 
 use colored::Colorize;
 use serde_json::json;
+use std::collections::HashMap;
 use tokio::time::Duration;
 
 use crate::utils::format_data;
@@ -33,6 +34,9 @@ pub struct WorkerResult {
 
     /// The amount of data read from each worker.
     pub buffer_sizes: Vec<usize>,
+
+    /// Error counting map.
+    pub error_map: HashMap<String, usize>,
 }
 
 impl WorkerResult {
@@ -43,6 +47,7 @@ impl WorkerResult {
             total_times: vec![],
             request_times: vec![],
             buffer_sizes: vec![],
+            error_map: HashMap::new(),
         }
     }
 
@@ -51,6 +56,16 @@ impl WorkerResult {
         self.request_times.extend(other.request_times);
         self.total_times.extend(other.total_times);
         self.buffer_sizes.extend(other.buffer_sizes);
+
+        // Insert/add new errors to current error map.
+        for (message, count) in other.error_map {
+            match self.error_map.get_mut(&message) {
+                Some(c) => *c += count,
+                None => {
+                    self.error_map.insert(message, count);
+                },
+            }
+        }
 
         self
     }
@@ -265,6 +280,14 @@ impl WorkerResult {
         );
 
         println!("+ {:-^15} + {:-^15} +", "", "",);
+    }
+
+    pub fn display_errors(&self) {
+        println!();
+
+        for (message, count) in &self.error_map {
+            println!("Error({}): {}", count, message);
+        }
     }
 
     pub fn display_json(&self) {
