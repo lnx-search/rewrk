@@ -1,4 +1,5 @@
 use super::BenchType;
+use anyhow::{anyhow, Result};
 use http::{header::HeaderValue, uri::Uri};
 use std::{
     convert::TryFrom,
@@ -6,8 +7,6 @@ use std::{
 };
 use tokio::task::spawn_blocking;
 use tokio_native_tls::TlsConnector;
-
-type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Scheme {
@@ -34,15 +33,19 @@ pub(crate) struct UserInput {
 }
 
 impl UserInput {
-    pub(crate) async fn new(protocol: BenchType, string: String) -> Result<Self, AnyError> {
+    pub(crate) async fn new(protocol: BenchType, string: String) -> Result<Self> {
         spawn_blocking(move || Self::blocking_new(protocol, string))
             .await
             .unwrap()
     }
 
-    fn blocking_new(protocol: BenchType, string: String) -> Result<Self, AnyError> {
+    fn blocking_new(protocol: BenchType, string: String) -> Result<Self> {
         let uri = Uri::try_from(string)?;
-        let scheme = match uri.scheme().ok_or("scheme is not present on uri")?.as_str() {
+        let scheme = uri
+            .scheme()
+            .ok_or(anyhow!("scheme is not present on uri"))?
+            .as_str();
+        let scheme = match scheme {
             "http" => Scheme::Http,
             "https" => {
                 let mut builder = native_tls::TlsConnector::builder();
@@ -59,9 +62,9 @@ impl UserInput {
                 let connector = TlsConnector::from(builder.build()?);
                 Scheme::Https(connector)
             }
-            _ => return Err("invalid scheme".into()),
+            _ => return Err(anyhow::Error::msg("invalid scheme")),
         };
-        let authority = uri.authority().ok_or("host not present on uri")?;
+        let authority = uri.authority().ok_or(anyhow!("host not present on uri"))?;
         let host = authority.host().to_owned();
         let port = authority
             .port_u16()
@@ -77,7 +80,7 @@ impl UserInput {
                 break;
             }
         }
-        let addr = last_addr.ok_or("hostname lookup failed")?;
+        let addr = last_addr.ok_or(anyhow!("hostname lookup failed"))?;
 
         Ok(Self {
             addr,

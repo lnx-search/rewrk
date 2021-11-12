@@ -2,7 +2,7 @@ use self::{
     usage::Usage,
     user_input::{Scheme, UserInput},
 };
-use crate::{error::AnyError, results::WorkerResult};
+use crate::results::WorkerResult;
 use futures_util::TryFutureExt;
 use http::{
     header::{self, HeaderMap},
@@ -24,7 +24,7 @@ use tower::{util::ServiceExt, Service};
 mod usage;
 mod user_input;
 
-pub type Handle = JoinHandle<Result<WorkerResult, AnyError>>;
+pub type Handle = JoinHandle<anyhow::Result<WorkerResult>>;
 
 /// The type of bench that is being ran.
 #[derive(Clone, Copy, Debug)]
@@ -52,7 +52,7 @@ pub async fn start_tasks(
     uri_string: String,
     bench_type: BenchType,
     _predicted_size: usize,
-) -> Result<Vec<Handle>, AnyError> {
+) -> anyhow::Result<Vec<Handle>> {
     let deadline = Instant::now() + time_for;
     let user_input = UserInput::new(bench_type, uri_string).await?;
 
@@ -72,7 +72,7 @@ async fn benchmark(
     deadline: Instant,
     bench_type: BenchType,
     user_input: UserInput,
-) -> Result<WorkerResult, AnyError> {
+) -> anyhow::Result<WorkerResult> {
     let benchmark_start = Instant::now();
     let connector = RewrkConnector::new(
         deadline,
@@ -181,7 +181,7 @@ impl RewrkConnector {
         timeout_at(self.deadline, future).await
     }
 
-    async fn connect(&self) -> Result<SendRequest<Body>, AnyError> {
+    async fn connect(&self) -> anyhow::Result<SendRequest<Body>> {
         let mut conn_builder = conn::Builder::new();
 
         if self.bench_type.is_http2() {
@@ -207,7 +207,7 @@ impl RewrkConnector {
     }
 }
 
-async fn handshake<S>(conn_builder: conn::Builder, stream: S) -> Result<SendRequest<Body>, AnyError>
+async fn handshake<S>(conn_builder: conn::Builder, stream: S) -> anyhow::Result<SendRequest<Body>>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {

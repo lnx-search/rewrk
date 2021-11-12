@@ -6,7 +6,6 @@ use regex::Regex;
 use tokio::time::Duration;
 
 mod bench;
-mod error;
 mod http;
 mod results;
 mod runtime;
