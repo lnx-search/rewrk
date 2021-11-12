@@ -8,10 +8,14 @@ edition = "2018"
 anyhow = "1"
 clap = "2"
 colored = "2"
+futures-util = "0.3"
 http = "0.2"
 hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
+native-tls = { version = "0.2", features = ["alpn"] }
+pin-project-lite = "0.2"
 regex = "1"
 rand = "0.8"
 serde_json = "1"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "macros"] }
+tokio-native-tls = "0.3"
 tower = { version = "0.4", features = ["util"] }

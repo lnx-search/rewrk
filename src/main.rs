@@ -8,7 +8,6 @@ use tokio::time::Duration;
 mod bench;
 mod error;
 mod http;
-mod proto;
 mod results;
 mod runtime;
 mod utils;
