@@ -64,7 +64,9 @@ impl UserInput {
             }
             _ => return Err(anyhow::Error::msg("invalid scheme")),
         };
-        let authority = uri.authority().ok_or_else(|| anyhow!("host not present on uri"))?;
+        let authority = uri
+            .authority()
+            .ok_or_else(|| anyhow!("host not present on uri"))?;
         let host = authority.host().to_owned();
         let port = authority
             .port_u16()

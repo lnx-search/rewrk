@@ -63,7 +63,7 @@ impl WorkerResult {
                 Some(c) => *c += count,
                 None => {
                     self.error_map.insert(message, count);
-                },
+                }
             }
         }
 

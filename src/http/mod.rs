@@ -83,10 +83,11 @@ async fn benchmark(
         user_input.host,
     );
 
-    let (mut send_request, mut connection_task) = match timeout_at(deadline, connector.connect()).await {
-        Ok(result) => result?,
-        Err(_elapsed) => return Ok(WorkerResult::default()),
-    };
+    let (mut send_request, mut connection_task) =
+        match timeout_at(deadline, connector.connect()).await {
+            Ok(result) => result?,
+            Err(_elapsed) => return Ok(WorkerResult::default()),
+        };
 
     let mut request_headers = HeaderMap::new();
 
@@ -142,7 +143,7 @@ async fn benchmark(
                     Some(count) => *count += 1,
                     None => {
                         error_map.insert(error, 1);
-                    },
+                    }
                 }
 
                 // Try reconnecting.
@@ -150,7 +151,7 @@ async fn benchmark(
                     Ok((sr, task)) => {
                         send_request = sr;
                         connection_task = task;
-                    },
+                    }
                     Err(_elapsed) => break,
                 };
             }
@@ -199,7 +200,9 @@ impl RewrkConnector {
         }
     }
 
-    async fn try_connect_until(&self) -> Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>), Elapsed> {
+    async fn try_connect_until(
+        &self,
+    ) -> Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>), Elapsed> {
         let future = async {
             loop {
                 if let Ok(v) = self.connect().await {
@@ -239,7 +242,10 @@ impl RewrkConnector {
     }
 }
 
-async fn handshake<S>(conn_builder: conn::Builder, stream: S) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)>
+async fn handshake<S>(
+    conn_builder: conn::Builder,
+    stream: S,
+) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
