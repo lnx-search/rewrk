@@ -88,6 +88,9 @@ OPTIONS:
 
 Building from source is incredibly simple, just make sure you have a stable version of Rust installed before you start.
 
+**With Cargo Install**
+1) - Run `cargo install rewrk --git https://github.com/ChillFish8/rewrk.git`
+
 **With Cargo Run**
 1) - Clone the repo source code
 2) - Run `cargo run --release -- <enter flags here>`
