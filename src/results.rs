@@ -283,10 +283,12 @@ impl WorkerResult {
     }
 
     pub fn display_errors(&self) {
-        println!();
+        if !self.error_map.is_empty() {
+            println!();
 
-        for (message, count) in &self.error_map {
-            println!("Error({}): {}", count, message);
+            for (message, count) in &self.error_map {
+                println!("{} Errors: {}", count, message);
+            }
         }
     }
 
