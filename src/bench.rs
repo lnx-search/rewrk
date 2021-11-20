@@ -1,13 +1,13 @@
-use anyhow::{anyhow, Result};
-use colored::*;
-use futures_util::StreamExt;
 use std::fmt::Display;
 use std::time::Duration;
 
-use crate::http;
+use anyhow::{anyhow, Result};
+use colored::*;
+use futures_util::StreamExt;
+
 use crate::results::WorkerResult;
-use crate::runtime;
 use crate::utils::div_mod;
+use crate::{http, runtime};
 
 /// The customisable settings that build the benchmark's behaviour.
 #[derive(Clone, Debug)]

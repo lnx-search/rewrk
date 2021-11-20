@@ -1,13 +1,10 @@
+use std::io;
+use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::task::{Context, Poll};
+
 use pin_project_lite::pin_project;
-use std::{
-    io,
-    pin::Pin,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    task::{Context, Poll},
-};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 #[derive(Clone, Default)]
@@ -73,7 +70,10 @@ impl<I: AsyncWrite> AsyncWrite for RecordStream<I> {
         self.project().inner.poll_flush(cx)
     }
 
-    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+    fn poll_shutdown(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<io::Result<()>> {
         self.project().inner.poll_shutdown(cx)
     }
 }

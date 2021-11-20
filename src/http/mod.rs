@@ -1,26 +1,25 @@
-use self::{
-    usage::Usage,
-    user_input::{Scheme, UserInput},
-};
-use crate::results::WorkerResult;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::time::Duration;
+
 use anyhow::anyhow;
-use futures_util::{stream::FuturesUnordered, TryFutureExt};
-use http::{
-    header::{self, HeaderMap},
-    Request,
-};
-use hyper::{
-    client::conn::{self, SendRequest},
-    Body,
-};
-use std::{collections::HashMap, net::SocketAddr, time::Duration};
-use tokio::{
-    io::{AsyncRead, AsyncWrite},
-    net::TcpStream,
-    task::JoinHandle,
-    time::{error::Elapsed, sleep, timeout_at, Instant},
-};
-use tower::{util::ServiceExt, Service};
+use futures_util::stream::FuturesUnordered;
+use futures_util::TryFutureExt;
+use http::header::{self, HeaderMap};
+use http::Request;
+use hyper::client::conn::{self, SendRequest};
+use hyper::Body;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::net::TcpStream;
+use tokio::task::JoinHandle;
+use tokio::time::error::Elapsed;
+use tokio::time::{sleep, timeout_at, Instant};
+use tower::util::ServiceExt;
+use tower::Service;
+
+use self::usage::Usage;
+use self::user_input::{Scheme, UserInput};
+use crate::results::WorkerResult;
 
 mod usage;
 mod user_input;
@@ -143,7 +142,7 @@ async fn benchmark(
                     Some(count) => *count += 1,
                     None => {
                         error_map.insert(error, 1);
-                    }
+                    },
                 }
 
                 // Try reconnecting.
@@ -151,7 +150,7 @@ async fn benchmark(
                     Ok((sr, task)) => {
                         send_request = sr;
                         connection_task = task;
-                    }
+                    },
                     Err(_elapsed) => break,
                 };
             }
@@ -216,7 +215,9 @@ impl RewrkConnector {
         timeout_at(self.deadline, future).await
     }
 
-    async fn connect(&self) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)> {
+    async fn connect(
+        &self,
+    ) -> anyhow::Result<(SendRequest<Body>, JoinHandle<hyper::Result<()>>)> {
         let mut conn_builder = conn::Builder::new();
 
         if self.bench_type.is_http2() {
@@ -231,7 +232,7 @@ impl RewrkConnector {
             Scheme::Https(ref tls_connector) => {
                 let stream = tls_connector.connect(&self.host, stream).await?;
                 handshake(conn_builder, stream).await?
-            }
+            },
         };
 
         Ok(send_request)

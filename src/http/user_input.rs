@@ -1,12 +1,13 @@
-use super::BenchType;
+use std::convert::TryFrom;
+use std::net::{SocketAddr, ToSocketAddrs};
+
 use anyhow::{anyhow, Result};
-use http::{header::HeaderValue, uri::Uri};
-use std::{
-    convert::TryFrom,
-    net::{SocketAddr, ToSocketAddrs},
-};
+use http::header::HeaderValue;
+use http::uri::Uri;
 use tokio::task::spawn_blocking;
 use tokio_native_tls::TlsConnector;
+
+use super::BenchType;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Scheme {
@@ -61,7 +62,7 @@ impl UserInput {
 
                 let connector = TlsConnector::from(builder.build()?);
                 Scheme::Https(connector)
-            }
+            },
             _ => return Err(anyhow::Error::msg("invalid scheme")),
         };
         let authority = uri

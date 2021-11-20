@@ -1,8 +1,9 @@
 #![allow(unused)]
 
+use std::collections::HashMap;
+
 use colored::Colorize;
 use serde_json::json;
-use std::collections::HashMap;
 use tokio::time::Duration;
 
 use crate::utils::format_data;
@@ -63,7 +64,7 @@ impl WorkerResult {
                 Some(c) => *c += count,
                 None => {
                     self.error_map.insert(message, count);
-                }
+                },
             }
         }
 

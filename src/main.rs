@@ -27,9 +27,11 @@ fn main() {
     let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
         Ok(v) => v,
         Err(_) => {
-            eprintln!("invalid parameter for 'threads' given, input type must be a integer.");
+            eprintln!(
+                "invalid parameter for 'threads' given, input type must be a integer."
+            );
             return;
-        }
+        },
     };
 
     let conns: usize = match args.value_of("connections").unwrap_or("1").parse() {
@@ -37,7 +39,7 @@ fn main() {
         Err(_) => {
             eprintln!("invalid parameter for 'connections' given, input type must be a integer.");
             return;
-        }
+        },
     };
 
     let host: &str = match args.value_of("host") {
@@ -45,7 +47,7 @@ fn main() {
         None => {
             eprintln!("missing 'host' parameter.");
             return;
-        }
+        },
     };
 
     let http2: bool = args.is_present("http2");
@@ -63,7 +65,7 @@ fn main() {
         Err(e) => {
             eprintln!("failed to parse duration parameter: {}", e);
             return;
-        }
+        },
     };
 
     let pct: bool = args.is_present("pct");
