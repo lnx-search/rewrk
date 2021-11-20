@@ -1,12 +1,13 @@
-use anyhow::{Error, Result};
-use colored::*;
 use std::fmt::Display;
 use std::time::Duration;
 
-use crate::http;
+use anyhow::{anyhow, Result};
+use colored::*;
+use futures_util::StreamExt;
+
 use crate::results::WorkerResult;
-use crate::runtime;
 use crate::utils::div_mod;
+use crate::{http, runtime};
 
 /// The customisable settings that build the benchmark's behaviour.
 #[derive(Clone, Debug)]
@@ -48,7 +49,8 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
         }
 
         if let Err(e) = rt.block_on(run(settings.clone())) {
-            eprintln!("failed to run benchmark round due to error: {:?}", e);
+            eprintln!();
+            eprintln!("{}", e);
             return;
         }
 
@@ -81,9 +83,9 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     )
     .await;
 
-    let handles = match handles {
+    let mut handles = match handles {
         Ok(v) => v,
-        Err(e) => return Err(Error::msg(format!("error parsing uri: {}", e))),
+        Err(e) => return Err(anyhow!("error parsing uri: {}", e)),
     };
 
     if !settings.display_json {
@@ -96,16 +98,10 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     }
 
     let mut combiner = WorkerResult::default();
-    for handle in handles {
-        let result = match handle.await {
-            Ok(r) => r,
-            Err(e) => return Err(Error::msg(format!("error processing results: {}", e))),
-        };
-
-        if let Ok(stats) = result {
-            combiner = combiner.combine(stats);
-        } else if let Err(e) = result {
-            return Err(Error::msg(format!("error combining results: {}", e)));
+    while let Some(result) = handles.next().await {
+        match result.unwrap() {
+            Ok(stats) => combiner = combiner.combine(stats),
+            Err(e) => return Err(anyhow!("connection error: {}", e)),
         }
     }
 
@@ -127,6 +123,9 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     if settings.display_percentile {
         combiner.display_percentile_table();
     }
+
+    // Display errors last.
+    combiner.display_errors();
 
     Ok(())
 }
