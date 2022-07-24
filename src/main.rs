@@ -73,6 +73,7 @@ fn main() {
     let rounds: usize = args
         .value_of("rounds")
         .unwrap_or("1")
+        .trim()
         .parse::<usize>()
         .unwrap_or(1);
 
@@ -198,6 +199,7 @@ fn parse_args() -> ArgMatches<'static> {
         .arg(
             Arg::with_name("rounds")
                 .long("rounds")
+                .short("r")
                 .help("Repeats the benchmarks n amount of times")
                 .takes_value(true)
                 .required(false),
