@@ -77,7 +77,7 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
     let handles = http::start_tasks(
         settings.duration,
         settings.connections,
-        settings.host.clone(),
+        settings.host.trim().to_string(),
         settings.bench_type,
         predict_size as usize,
     )

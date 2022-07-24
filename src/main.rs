@@ -24,7 +24,7 @@ static DURATION_MATCH: &str =
 fn main() {
     let args = parse_args();
 
-    let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
+    let threads: usize = match args.value_of("threads").unwrap_or("1").trim().parse() {
         Ok(v) => v,
         Err(_) => {
             eprintln!(
@@ -34,7 +34,7 @@ fn main() {
         },
     };
 
-    let conns: usize = match args.value_of("connections").unwrap_or("1").parse() {
+    let conns: usize = match args.value_of("connections").unwrap_or("1").trim().parse() {
         Ok(v) => v,
         Err(_) => {
             eprintln!("invalid parameter for 'connections' given, input type must be a integer.");
@@ -73,6 +73,7 @@ fn main() {
     let rounds: usize = args
         .value_of("rounds")
         .unwrap_or("1")
+        .trim()
         .parse::<usize>()
         .unwrap_or(1);
 
@@ -198,6 +199,7 @@ fn parse_args() -> ArgMatches<'static> {
         .arg(
             Arg::with_name("rounds")
                 .long("rounds")
+                .short("r")
                 .help("Repeats the benchmarks n amount of times")
                 .takes_value(true)
                 .required(false),
