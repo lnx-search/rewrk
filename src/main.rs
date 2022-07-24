@@ -24,7 +24,7 @@ static DURATION_MATCH: &str =
 fn main() {
     let args = parse_args();
 
-    let threads: usize = match args.value_of("threads").unwrap_or("1").parse() {
+    let threads: usize = match args.value_of("threads").unwrap_or("1").trim().parse() {
         Ok(v) => v,
         Err(_) => {
             eprintln!(
