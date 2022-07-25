@@ -1,10 +1,10 @@
 use std::fmt::Display;
 use std::time::Duration;
 
+use ::http::{HeaderMap, Method};
 use anyhow::{anyhow, Result};
 use colored::*;
 use futures_util::StreamExt;
-use ::http::{HeaderMap, Method};
 use hyper::body::Bytes;
 
 use crate::results::WorkerResult;

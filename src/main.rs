@@ -1,11 +1,13 @@
 extern crate clap;
 
+use std::str::FromStr;
+
+use ::http::header::HeaderName;
+use ::http::{HeaderMap, HeaderValue, Method};
 use anyhow::{Context, Error, Result};
 use clap::{App, Arg, ArgMatches};
-use ::http::{header::HeaderName, HeaderMap, HeaderValue, Method};
 use hyper::body::Bytes;
 use regex::Regex;
-use std::str::FromStr;
 use tokio::time::Duration;
 
 mod bench;

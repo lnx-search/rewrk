@@ -6,7 +6,7 @@ use anyhow::anyhow;
 use futures_util::stream::FuturesUnordered;
 use futures_util::TryFutureExt;
 use http::header::{self, HeaderMap};
-use http::{Request, Method};
+use http::{Method, Request};
 use hyper::body::Bytes;
 use hyper::client::conn::{self, SendRequest};
 use hyper::Body;
@@ -58,7 +58,8 @@ pub async fn start_tasks(
     _predicted_size: usize,
 ) -> anyhow::Result<FuturesUnordered<Handle>> {
     let deadline = Instant::now() + time_for;
-    let user_input = UserInput::new(bench_type, uri_string, method, headers, body).await?;
+    let user_input =
+        UserInput::new(bench_type, uri_string, method, headers, body).await?;
 
     let handles = FuturesUnordered::new();
 
