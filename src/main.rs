@@ -1,9 +1,11 @@
 extern crate clap;
 
-use anyhow::{Error, Result};
+use anyhow::{Error, Result, Context};
 use clap::{App, Arg, ArgMatches};
+use ::http::{HeaderMap, header::HeaderName, HeaderValue};
 use regex::Regex;
 use tokio::time::Duration;
+use std::str::FromStr;
 
 mod bench;
 mod http;
@@ -77,6 +79,18 @@ fn main() {
         .parse::<usize>()
         .unwrap_or(1);
 
+    let headers = if let Some(headers) = args.values_of("header") {
+        match headers.map(parse_header).collect::<Result<HeaderMap<_>>>() {
+            Ok(headers) => headers,
+            Err(e) => {
+                eprintln!("failed to parse header: {}", e);
+                return;
+            }
+        }
+    } else {
+        HeaderMap::new()
+    };
+
     let settings = bench::BenchmarkSettings {
         threads,
         connections: conns,
@@ -86,6 +100,7 @@ fn main() {
         display_percentile: pct,
         display_json: json,
         rounds,
+        headers,
     };
 
     bench::start_benchmark(settings);
@@ -135,6 +150,13 @@ fn parse_duration(duration: &str) -> Result<Duration> {
     }
 
     Ok(dur)
+}
+
+fn parse_header(value: &str) -> Result<(HeaderName, HeaderValue)> {
+    let (key, value) = value.split_once(": ").context("Header value missing colon (\": \")")?;
+    let key = HeaderName::from_str(key).context("Invalid header name")?;
+    let value = HeaderValue::from_str(value).context("Invalid header value")?;
+    Ok((key, value))
 }
 
 /// Contains Clap's app setup.
@@ -203,6 +225,15 @@ fn parse_args() -> ArgMatches<'static> {
                 .help("Repeats the benchmarks n amount of times")
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name("header")
+                .long("header")
+                .short("H")
+                .help("Add header to request e.g. '-H \"content-type: text/plain\"'")
+                .takes_value(true)
+                .required(false)
+                .multiple(true),
         )
         //.arg(
         //    Arg::with_name("random")

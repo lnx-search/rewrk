@@ -51,10 +51,11 @@ pub async fn start_tasks(
     connections: usize,
     uri_string: String,
     bench_type: BenchType,
+    headers: HeaderMap,
     _predicted_size: usize,
 ) -> anyhow::Result<FuturesUnordered<Handle>> {
     let deadline = Instant::now() + time_for;
-    let user_input = UserInput::new(bench_type, uri_string).await?;
+    let user_input = UserInput::new(bench_type, uri_string, headers).await?;
 
     let handles = FuturesUnordered::new();
 
@@ -94,6 +95,8 @@ async fn benchmark(
     if bench_type.is_http1() {
         request_headers.insert(header::HOST, user_input.host_header);
     }
+
+    request_headers.extend(user_input.headers);
 
     let mut request_times = Vec::new();
     let mut error_map = HashMap::new();

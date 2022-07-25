@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::net::{SocketAddr, ToSocketAddrs};
 
 use anyhow::{anyhow, Result};
+use http::HeaderMap;
 use http::header::HeaderValue;
 use http::uri::Uri;
 use tokio::task::spawn_blocking;
@@ -31,16 +32,17 @@ pub(crate) struct UserInput {
     pub(crate) host: String,
     pub(crate) host_header: HeaderValue,
     pub(crate) uri: Uri,
+    pub(crate) headers: HeaderMap,
 }
 
 impl UserInput {
-    pub(crate) async fn new(protocol: BenchType, string: String) -> Result<Self> {
-        spawn_blocking(move || Self::blocking_new(protocol, string))
+    pub(crate) async fn new(protocol: BenchType, string: String, headers: HeaderMap) -> Result<Self> {
+        spawn_blocking(move || Self::blocking_new(protocol, string, headers))
             .await
             .unwrap()
     }
 
-    fn blocking_new(protocol: BenchType, string: String) -> Result<Self> {
+    fn blocking_new(protocol: BenchType, string: String, headers: HeaderMap) -> Result<Self> {
         let uri = Uri::try_from(string)?;
         let scheme = uri
             .scheme()
@@ -91,6 +93,7 @@ impl UserInput {
             host,
             host_header,
             uri,
+            headers,
         })
     }
 }
