@@ -6,7 +6,8 @@ use anyhow::anyhow;
 use futures_util::stream::FuturesUnordered;
 use futures_util::TryFutureExt;
 use http::header::{self, HeaderMap};
-use http::Request;
+use http::{Method, Request};
+use hyper::body::Bytes;
 use hyper::client::conn::{self, SendRequest};
 use hyper::Body;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -51,10 +52,14 @@ pub async fn start_tasks(
     connections: usize,
     uri_string: String,
     bench_type: BenchType,
+    method: Method,
+    headers: HeaderMap,
+    body: Bytes,
     _predicted_size: usize,
 ) -> anyhow::Result<FuturesUnordered<Handle>> {
     let deadline = Instant::now() + time_for;
-    let user_input = UserInput::new(bench_type, uri_string).await?;
+    let user_input =
+        UserInput::new(bench_type, uri_string, method, headers, body).await?;
 
     let handles = FuturesUnordered::new();
 
@@ -95,6 +100,8 @@ async fn benchmark(
         request_headers.insert(header::HOST, user_input.host_header);
     }
 
+    request_headers.extend(user_input.headers);
+
     let mut request_times = Vec::new();
     let mut error_map = HashMap::new();
 
@@ -102,7 +109,8 @@ async fn benchmark(
     // Futures must not be awaited without timeout.
     loop {
         // Create request from **parsed** data.
-        let mut request = Request::new(Body::empty());
+        let mut request = Request::new(Body::from(user_input.body.clone()));
+        *request.method_mut() = user_input.method.clone();
         *request.uri_mut() = user_input.uri.clone();
         *request.headers_mut() = request_headers.clone();
 
