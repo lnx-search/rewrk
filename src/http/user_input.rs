@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use http::HeaderMap;
 use http::header::HeaderValue;
 use http::uri::Uri;
+use hyper::body::Bytes;
 use tokio::task::spawn_blocking;
 use tokio_native_tls::TlsConnector;
 
@@ -33,16 +34,17 @@ pub(crate) struct UserInput {
     pub(crate) host_header: HeaderValue,
     pub(crate) uri: Uri,
     pub(crate) headers: HeaderMap,
+    pub(crate) body: Bytes,
 }
 
 impl UserInput {
-    pub(crate) async fn new(protocol: BenchType, string: String, headers: HeaderMap) -> Result<Self> {
-        spawn_blocking(move || Self::blocking_new(protocol, string, headers))
+    pub(crate) async fn new(protocol: BenchType, string: String, headers: HeaderMap, body: Bytes) -> Result<Self> {
+        spawn_blocking(move || Self::blocking_new(protocol, string, headers, body))
             .await
             .unwrap()
     }
 
-    fn blocking_new(protocol: BenchType, string: String, headers: HeaderMap) -> Result<Self> {
+    fn blocking_new(protocol: BenchType, string: String, headers: HeaderMap, body: Bytes) -> Result<Self> {
         let uri = Uri::try_from(string)?;
         let scheme = uri
             .scheme()
@@ -94,6 +96,7 @@ impl UserInput {
             host_header,
             uri,
             headers,
+            body,
         })
     }
 }

@@ -7,6 +7,7 @@ use futures_util::stream::FuturesUnordered;
 use futures_util::TryFutureExt;
 use http::header::{self, HeaderMap};
 use http::Request;
+use hyper::body::Bytes;
 use hyper::client::conn::{self, SendRequest};
 use hyper::Body;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -52,10 +53,11 @@ pub async fn start_tasks(
     uri_string: String,
     bench_type: BenchType,
     headers: HeaderMap,
+    body: Bytes,
     _predicted_size: usize,
 ) -> anyhow::Result<FuturesUnordered<Handle>> {
     let deadline = Instant::now() + time_for;
-    let user_input = UserInput::new(bench_type, uri_string, headers).await?;
+    let user_input = UserInput::new(bench_type, uri_string, headers, body).await?;
 
     let handles = FuturesUnordered::new();
 
@@ -105,7 +107,7 @@ async fn benchmark(
     // Futures must not be awaited without timeout.
     loop {
         // Create request from **parsed** data.
-        let mut request = Request::new(Body::empty());
+        let mut request = Request::new(Body::from(user_input.body.clone()));
         *request.uri_mut() = user_input.uri.clone();
         *request.headers_mut() = request_headers.clone();
 

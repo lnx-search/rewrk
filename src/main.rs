@@ -3,6 +3,7 @@ extern crate clap;
 use anyhow::{Error, Result, Context};
 use clap::{App, Arg, ArgMatches};
 use ::http::{HeaderMap, header::HeaderName, HeaderValue};
+use hyper::body::Bytes;
 use regex::Regex;
 use tokio::time::Duration;
 use std::str::FromStr;
@@ -91,6 +92,11 @@ fn main() {
         HeaderMap::new()
     };
 
+    let body: &str = args
+        .value_of("body")
+        .unwrap_or_default();
+    let body = Bytes::copy_from_slice(body.as_bytes());
+
     let settings = bench::BenchmarkSettings {
         threads,
         connections: conns,
@@ -101,6 +107,7 @@ fn main() {
         display_json: json,
         rounds,
         headers,
+        body,
     };
 
     bench::start_benchmark(settings);
@@ -234,6 +241,14 @@ fn parse_args() -> ArgMatches<'static> {
                 .takes_value(true)
                 .required(false)
                 .multiple(true),
+        )
+        .arg(
+            Arg::with_name("body")
+                .long("body")
+                .short("b")
+                .help("Add body to request e.g. '-b \"foo\"'")
+                .takes_value(true)
+                .required(false),
         )
         //.arg(
         //    Arg::with_name("random")

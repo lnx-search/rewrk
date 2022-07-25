@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use colored::*;
 use futures_util::StreamExt;
 use ::http::HeaderMap;
+use hyper::body::Bytes;
 
 use crate::results::WorkerResult;
 use crate::utils::div_mod;
@@ -40,6 +41,9 @@ pub struct BenchmarkSettings {
 
     /// Additional request headers.
     pub headers: HeaderMap,
+
+    /// Request body.
+    pub body: Bytes,
 }
 
 /// Builds the runtime with the given settings and blocks on the main future.
@@ -84,6 +88,7 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
         settings.host.trim().to_string(),
         settings.bench_type,
         settings.headers,
+        settings.body,
         predict_size as usize,
     )
     .await;
