@@ -4,7 +4,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use colored::*;
 use futures_util::StreamExt;
-use ::http::HeaderMap;
+use ::http::{HeaderMap, Method};
 use hyper::body::Bytes;
 
 use crate::results::WorkerResult;
@@ -38,6 +38,9 @@ pub struct BenchmarkSettings {
 
     /// The number of rounds to repeat.
     pub rounds: usize,
+
+    /// The request method.
+    pub method: Method,
 
     /// Additional request headers.
     pub headers: HeaderMap,
@@ -87,6 +90,7 @@ async fn run(settings: BenchmarkSettings) -> Result<()> {
         settings.connections,
         settings.host.trim().to_string(),
         settings.bench_type,
+        settings.method,
         settings.headers,
         settings.body,
         predict_size as usize,

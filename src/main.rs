@@ -1,12 +1,12 @@
 extern crate clap;
 
-use anyhow::{Error, Result, Context};
+use anyhow::{Context, Error, Result};
 use clap::{App, Arg, ArgMatches};
-use ::http::{HeaderMap, header::HeaderName, HeaderValue};
+use ::http::{header::HeaderName, HeaderMap, HeaderValue, Method};
 use hyper::body::Bytes;
 use regex::Regex;
-use tokio::time::Duration;
 use std::str::FromStr;
+use tokio::time::Duration;
 
 mod bench;
 mod http;
@@ -80,21 +80,31 @@ fn main() {
         .parse::<usize>()
         .unwrap_or(1);
 
+    let method = match args
+        .value_of("method")
+        .map(|method| Method::from_str(&method.to_uppercase()))
+        .transpose()
+    {
+        Ok(method) => method.unwrap_or(Method::GET),
+        Err(e) => {
+            eprintln!("failed to parse method: {}", e);
+            return;
+        },
+    };
+
     let headers = if let Some(headers) = args.values_of("header") {
         match headers.map(parse_header).collect::<Result<HeaderMap<_>>>() {
             Ok(headers) => headers,
             Err(e) => {
                 eprintln!("failed to parse header: {}", e);
                 return;
-            }
+            },
         }
     } else {
         HeaderMap::new()
     };
 
-    let body: &str = args
-        .value_of("body")
-        .unwrap_or_default();
+    let body: &str = args.value_of("body").unwrap_or_default();
     let body = Bytes::copy_from_slice(body.as_bytes());
 
     let settings = bench::BenchmarkSettings {
@@ -106,6 +116,7 @@ fn main() {
         display_percentile: pct,
         display_json: json,
         rounds,
+        method,
         headers,
         body,
     };
@@ -160,7 +171,9 @@ fn parse_duration(duration: &str) -> Result<Duration> {
 }
 
 fn parse_header(value: &str) -> Result<(HeaderName, HeaderValue)> {
-    let (key, value) = value.split_once(": ").context("Header value missing colon (\": \")")?;
+    let (key, value) = value
+        .split_once(": ")
+        .context("Header value missing colon (\": \")")?;
     let key = HeaderName::from_str(key).context("Invalid header name")?;
     let value = HeaderValue::from_str(value).context("Invalid header value")?;
     Ok((key, value))
@@ -232,6 +245,15 @@ fn parse_args() -> ArgMatches<'static> {
                 .help("Repeats the benchmarks n amount of times")
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name("method")
+                .long("method")
+                .short("m")
+                .help("Set request method e.g. '-m get'")
+                .takes_value(true)
+                .required(false)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("header")

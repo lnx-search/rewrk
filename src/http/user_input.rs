@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::net::{SocketAddr, ToSocketAddrs};
 
 use anyhow::{anyhow, Result};
-use http::HeaderMap;
+use http::{HeaderMap, Method};
 use http::header::HeaderValue;
 use http::uri::Uri;
 use hyper::body::Bytes;
@@ -33,18 +33,19 @@ pub(crate) struct UserInput {
     pub(crate) host: String,
     pub(crate) host_header: HeaderValue,
     pub(crate) uri: Uri,
+    pub(crate) method: Method,
     pub(crate) headers: HeaderMap,
     pub(crate) body: Bytes,
 }
 
 impl UserInput {
-    pub(crate) async fn new(protocol: BenchType, string: String, headers: HeaderMap, body: Bytes) -> Result<Self> {
-        spawn_blocking(move || Self::blocking_new(protocol, string, headers, body))
+    pub(crate) async fn new(protocol: BenchType, string: String, method: Method, headers: HeaderMap, body: Bytes) -> Result<Self> {
+        spawn_blocking(move || Self::blocking_new(protocol, string, method, headers, body))
             .await
             .unwrap()
     }
 
-    fn blocking_new(protocol: BenchType, string: String, headers: HeaderMap, body: Bytes) -> Result<Self> {
+    fn blocking_new(protocol: BenchType, string: String, method: Method, headers: HeaderMap, body: Bytes) -> Result<Self> {
         let uri = Uri::try_from(string)?;
         let scheme = uri
             .scheme()
@@ -95,6 +96,7 @@ impl UserInput {
             host,
             host_header,
             uri,
+            method,
             headers,
             body,
         })
