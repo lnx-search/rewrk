@@ -1,21 +1,22 @@
 [package]
 name = "rewrk"
-version = "0.3.2"
-authors = ["Harrison Burt <57491488+ChillFish8@users.noreply.github.com>", "Programatik <programatik29@gmail.com>"]
+version = "0.4.0"
+authors = ["Harrison Burt <hburt2003@gmail.com>", "Programatik <programatik29@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 anyhow = "1"
-clap = "2"
-colored = "2"
-futures-util = "0.3"
-http = "0.2"
-hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
-native-tls = { version = "0.2", features = ["alpn"] }
-pin-project-lite = "0.2"
-regex = "1"
-rand = "0.8"
-serde_json = "1"
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "macros"] }
-tokio-native-tls = "0.3"
-tower = { version = "0.4", features = ["util"] }
+url = "1.7.2"
+humantime = "2.1.0"
+http = "0.2.8"
+
+clap = { version = "3", features = ["derive", "env"] }
+
+
+[workspace]
+members = [
+    "rewrk-bench",
+    "rewrk-connection",
+    "rewrk-results",
+    "rewrk-setup",
+]
