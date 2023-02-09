@@ -10,11 +10,12 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 #[derive(Clone, Default)]
 /// A utility for wrapping streams and measuring the number of
 /// bytes being passed through the wrapped stream.
-pub(crate) struct UsageTracker {
+pub(crate) struct IoUsageTracker {
     received: Arc<AtomicU64>,
+    written: Arc<AtomicU64>,
 }
 
-impl UsageTracker {
+impl IoUsageTracker {
     /// Create a new usage tracker.
     pub(crate) fn new() -> Self {
         Self::default()
@@ -25,9 +26,13 @@ impl UsageTracker {
         RecordStream::new(stream, self.clone())
     }
 
-    /// Get the current usage count.
-    pub(crate) fn get_count(&self) -> u64 {
+    /// Get the current received usage count.
+    pub(crate) fn get_received_count(&self) -> u64 {
         self.received.load(Ordering::SeqCst)
+    }
+    /// Get the current written usage count.
+    pub(crate) fn get_written_count(&self) -> u64 {
+        self.written.load(Ordering::SeqCst)
     }
 }
 
@@ -35,12 +40,12 @@ pin_project! {
     pub(crate) struct RecordStream<I> {
         #[pin]
         inner: I,
-        usage: UsageTracker,
+        usage: IoUsageTracker,
     }
 }
 
 impl<I> RecordStream<I> {
-    fn new(inner: I, usage: UsageTracker) -> Self {
+    fn new(inner: I, usage: IoUsageTracker) -> Self {
         Self { inner, usage }
     }
 }
@@ -68,6 +73,9 @@ impl<I: AsyncWrite> AsyncWrite for RecordStream<I> {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
+        self.usage
+            .written
+            .fetch_add(buf.len() as u64, Ordering::SeqCst);
         self.project().inner.poll_write(cx, buf)
     }
 

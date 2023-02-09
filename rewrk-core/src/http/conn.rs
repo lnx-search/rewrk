@@ -1,6 +1,5 @@
 use std::future::Future;
 use std::net::SocketAddr;
-use hdrhistogram::Histogram;
 use http::{Request, Response};
 
 use hyper::client::conn;
@@ -13,7 +12,9 @@ use tokio::task::JoinHandle;
 use tokio::time::{timeout_at, Duration, Instant};
 
 use crate::http::{HttpMode, Scheme};
+use crate::recording::{Sample, SampleFactory};
 use crate::utils;
+use crate::utils::IoUsageTracker;
 
 /// The maximum number of attempts to try connect before aborting.
 const RETRY_MAX_DEFAULT: usize = 3;
@@ -26,7 +27,8 @@ pub struct ReWrkConnector {
     host: String,
     retry_max: usize,
 
-    io_tracker: utils::UsageTracker,
+    sample_factory: SampleFactory,
+    io_tracker: IoUsageTracker,
 }
 
 impl ReWrkConnector {
@@ -36,14 +38,16 @@ impl ReWrkConnector {
         mode: HttpMode,
         scheme: Scheme,
         host: impl Into<String>,
+        sample_factory: SampleFactory,
     ) -> Self {
         Self {
             addr,
             mode,
             scheme,
+            sample_factory,
             host: host.into(),
             retry_max: RETRY_MAX_DEFAULT,
-            io_tracker: utils::UsageTracker::new(),
+            io_tracker: utils::IoUsageTracker::new(),
         }
     }
 
@@ -54,7 +58,7 @@ impl ReWrkConnector {
 
     /// Gets the current total number of bytes sent across the connection.
     pub fn total_bytes_sent(&self) -> u64 {
-        self.io_tracker.get_count()
+        self.io_tracker.get_received_count()
     }
 
     /// Establish a new connection using the given connector.
@@ -116,44 +120,61 @@ impl ReWrkConnector {
             },
         };
 
-        Ok(ReWrkConnection {
-            mode: self.mode,
-            stream,
-        })
+        Ok(ReWrkConnection::new(self.io_tracker.clone(), stream, self.sample_factory.clone()))
     }
 }
 
 /// An established HTTP connection for benchmarking.
 pub struct ReWrkConnection {
-    mode: HttpMode,
     stream: HttpStream,
 
-    latency_hist: Histogram<u32>,
-    transfer_hist: Histogram<u32>,
+    io_tracker: IoUsageTracker,
+    sample_factory: SampleFactory,
+    sample: Sample,
 }
 
 impl ReWrkConnection {
-    pub fn new(mode: HttpMode, stream: HttpStream) -> Self {
-        Self {
-            mode,
-            stream,
+    /// Creates a new live connection from an existing stream
+    fn new(
+        io_tracker: IoUsageTracker,
+        stream: HttpStream,
+        sample_factory: SampleFactory,
+    ) -> Self {
+        let sample = sample_factory.new_sample();
 
-            latency_hist: Histogram::new(600_000_000)
+        Self {
+            io_tracker,
+            stream,
+            sample_factory,
+            sample,
         }
     }
 
+    /// Send a HTTP request and record the relevant metrics
     pub async fn send(&mut self, request: Request<Body>) -> Result<(), hyper::Error> {
+        let read_transfer_start = self.io_tracker.get_received_count();
+        let write_transfer_start = self.io_tracker.get_written_count();
         let start = Instant::now();
+
         let mut resp = self.stream.send(request).await?;
-
-
-
         let data_stream = resp.body_mut();
         while let Some(res) = data_stream.data().await {
             res?;
         }
 
         let elapsed_time = start.elapsed();
+        self.sample.record_latency(elapsed_time);
+
+        let read_transfer_end = self.io_tracker.get_received_count();
+        let write_transfer_end = self.io_tracker.get_written_count();
+
+        let write_delta = write_transfer_end - write_transfer_start;
+        let read_delta = read_transfer_end - read_transfer_start;
+        let write_rate = write_delta / elapsed_time.as_secs();
+        let read_rate = read_delta / elapsed_time.as_secs();
+
+        self.sample.record_read_transfer(read_rate);
+        self.sample.record_write_transfer(write_rate);
 
         Ok(())
     }

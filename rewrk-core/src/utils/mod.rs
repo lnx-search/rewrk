@@ -1,3 +1,3 @@
-mod usage;
+mod io_usage;
 
-pub(crate) use usage::{RecordStream, UsageTracker};
+pub(crate) use io_usage::{RecordStream, IoUsageTracker};
