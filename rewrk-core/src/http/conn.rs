@@ -56,11 +56,6 @@ impl ReWrkConnector {
         self.retry_max = max;
     }
 
-    /// Gets the current total number of bytes sent across the connection.
-    pub fn total_bytes_sent(&self) -> u64 {
-        self.io_tracker.get_received_count()
-    }
-
     /// Establish a new connection using the given connector.
     ///
     /// This will attempt to connect to the URI within the given duration.
@@ -168,13 +163,8 @@ impl ReWrkConnection {
         let read_transfer_end = self.io_tracker.get_received_count();
         let write_transfer_end = self.io_tracker.get_written_count();
 
-        let write_delta = write_transfer_end - write_transfer_start;
-        let read_delta = read_transfer_end - read_transfer_start;
-        let write_rate = write_delta / elapsed_time.as_secs();
-        let read_rate = read_delta / elapsed_time.as_secs();
-
-        self.sample.record_read_transfer(read_rate);
-        self.sample.record_write_transfer(write_rate);
+        self.sample.record_read_transfer(read_transfer_start, read_transfer_end, elapsed_time);
+        self.sample.record_write_transfer(write_transfer_start, write_transfer_end, elapsed_time);
 
         Ok(())
     }
