@@ -1,18 +1,52 @@
 use std::time::{Duration, Instant};
+use async_trait::async_trait;
 use hdrhistogram::Histogram;
+use flume::{Sender, TrySendError};
 
+#[async_trait]
+pub trait SampleSink {
+    async fn process_sample(&mut self, sample: Sample) -> anyhow::Result<()>;
+}
+
+
+#[derive(Debug, thiserror::Error)]
+#[error("The service should shutdown.")]
+pub struct Shutdown;
 
 #[derive(Clone)]
 pub struct SampleFactory {
     window_timeout: Duration,
+
+    sample_submitter: Sender<Sample>,
 }
 
 impl SampleFactory {
-    pub fn new_sample(&mut self) -> Sample {
+    pub fn new(
+        window_timeout: Duration,
+    ) -> Self {
+        let (sample_submitter, rx) = flume::unbounded();
+
+        Self {
+            window_timeout,
+
+            sample_submitter,
+        }
+    }
+
+    pub fn new_sample(&self) -> Sample {
         todo!()
     }
 
+    /// Attempts to submit a sample to the processor.
+    pub fn submit_sample(&self, sample: Sample) -> Result<(), Shutdown> {
+        let result = self.sample_submitter.try_send(sample);
 
+        match result {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(_)) => panic!("Sample submitter should never be full."),
+            Err(TrySendError::Disconnected(_)) => Err(Shutdown),
+        }
+    }
 }
 
 

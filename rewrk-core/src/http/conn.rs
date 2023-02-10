@@ -28,7 +28,6 @@ pub struct ReWrkConnector {
     retry_max: usize,
 
     sample_factory: SampleFactory,
-    io_tracker: IoUsageTracker,
 }
 
 impl ReWrkConnector {
@@ -47,7 +46,6 @@ impl ReWrkConnector {
             sample_factory,
             host: host.into(),
             retry_max: RETRY_MAX_DEFAULT,
-            io_tracker: utils::IoUsageTracker::new(),
         }
     }
 
@@ -105,7 +103,9 @@ impl ReWrkConnector {
         }
 
         let stream = TcpStream::connect(self.addr).await?;
-        let stream = self.io_tracker.wrap_stream(stream);
+
+        let usage_tracker = IoUsageTracker::new();
+        let stream = usage_tracker.wrap_stream(stream);
 
         let stream = match self.scheme {
             Scheme::Http => handshake(conn_builder, stream).await?,
@@ -115,7 +115,7 @@ impl ReWrkConnector {
             },
         };
 
-        Ok(ReWrkConnection::new(self.io_tracker.clone(), stream, self.sample_factory.clone()))
+        Ok(ReWrkConnection::new(usage_tracker, stream, self.sample_factory.clone()))
     }
 }
 
@@ -154,6 +154,9 @@ impl ReWrkConnection {
         let mut resp = self.stream.send(request).await?;
         let data_stream = resp.body_mut();
         while let Some(res) = data_stream.data().await {
+            // We dont actually care about reading the data
+            // we just care about draining the body.
+            // TODO: Maybe consider returning the body/request(?)
             res?;
         }
 
