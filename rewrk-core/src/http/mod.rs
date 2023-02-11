@@ -2,6 +2,8 @@ use tokio_native_tls::TlsConnector;
 
 mod conn;
 
+pub use self::conn::{ReWrkConnection, ReWrkConnector, HttpStream};
+
 /// The type of bench that is being ran.
 #[derive(Clone, Copy, Debug)]
 pub enum HttpMode {
@@ -36,9 +38,4 @@ impl Scheme {
             Self::Https(_) => 443,
         }
     }
-}
-
-
-pub enum SendError {
-    Hyper(hyper::Error),
 }

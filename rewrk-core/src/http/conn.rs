@@ -1,11 +1,15 @@
+use std::borrow::Cow;
 use std::future::Future;
+use std::mem;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use http::{Request, Response};
+use http::response::Parts;
 
 use hyper::client::conn;
 use hyper::client::conn::SendRequest;
 use hyper::Body;
-use hyper::body::HttpBody;
+use hyper::body::Bytes;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
@@ -13,8 +17,9 @@ use tokio::time::{timeout_at, Duration, Instant};
 
 use crate::http::{HttpMode, Scheme};
 use crate::recording::{Sample, SampleFactory};
-use crate::utils;
+use crate::{ResponseValidator, utils};
 use crate::utils::IoUsageTracker;
+use crate::validator::ValidationError;
 
 /// The maximum number of attempts to try connect before aborting.
 const RETRY_MAX_DEFAULT: usize = 3;
@@ -25,6 +30,7 @@ pub struct ReWrkConnector {
     mode: HttpMode,
     scheme: Scheme,
     host: String,
+    validator: Arc<dyn ResponseValidator>,
     retry_max: usize,
 
     sample_factory: SampleFactory,
@@ -38,12 +44,14 @@ impl ReWrkConnector {
         scheme: Scheme,
         host: impl Into<String>,
         sample_factory: SampleFactory,
+        validator: Arc<dyn ResponseValidator>,
     ) -> Self {
         Self {
             addr,
             mode,
             scheme,
             sample_factory,
+            validator,
             host: host.into(),
             retry_max: RETRY_MAX_DEFAULT,
         }
@@ -115,7 +123,7 @@ impl ReWrkConnector {
             },
         };
 
-        Ok(ReWrkConnection::new(usage_tracker, stream, self.sample_factory.clone()))
+        Ok(ReWrkConnection::new(usage_tracker, stream, self.sample_factory.clone(), self.validator.clone()))
     }
 }
 
@@ -126,6 +134,10 @@ pub struct ReWrkConnection {
     io_tracker: IoUsageTracker,
     sample_factory: SampleFactory,
     sample: Sample,
+    validator: Arc<dyn ResponseValidator>,
+
+    last_send_sample: Instant,
+    should_stop: bool,
 }
 
 impl ReWrkConnection {
@@ -134,14 +146,19 @@ impl ReWrkConnection {
         io_tracker: IoUsageTracker,
         stream: HttpStream,
         sample_factory: SampleFactory,
+        validator: Arc<dyn ResponseValidator>,
     ) -> Self {
         let sample = sample_factory.new_sample();
+        let last_send_sample = Instant::now();
 
         Self {
             io_tracker,
             stream,
             sample_factory,
             sample,
+            validator,
+            last_send_sample,
+            should_stop: false,
         }
     }
 
@@ -151,25 +168,60 @@ impl ReWrkConnection {
         let write_transfer_start = self.io_tracker.get_written_count();
         let start = Instant::now();
 
-        let mut resp = self.stream.send(request).await?;
-        let data_stream = resp.body_mut();
-        while let Some(res) = data_stream.data().await {
-            // We dont actually care about reading the data
-            // we just care about draining the body.
-            // TODO: Maybe consider returning the body/request(?)
-            res?;
-        }
+        let (head, body) = match self.execute_req(request).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                if e.is_body_write_aborted()
+                    || e.is_closed()
+                    || e.is_connect()
+                {
+                    self.sample.record_error(ValidationError::ConnectionAborted);
+                    self.should_stop = true;
+                } else if e.is_incomplete_message()
+                    || e.is_parse()
+                    || e.is_parse_too_large()
+                    || e.is_parse_status()
+                {
+                    self.sample.record_error(ValidationError::InvalidBody(Cow::Borrowed("invalid-http-body")));
+                } else if e.is_timeout() {
+                    self.sample.record_error(ValidationError::Timeout);
+                } else {
+                    return Err(e);
+                }
+
+                return Ok(())
+            }
+        };
 
         let elapsed_time = start.elapsed();
-        self.sample.record_latency(elapsed_time);
-
         let read_transfer_end = self.io_tracker.get_received_count();
         let write_transfer_end = self.io_tracker.get_written_count();
 
-        self.sample.record_read_transfer(read_transfer_start, read_transfer_end, elapsed_time);
-        self.sample.record_write_transfer(write_transfer_start, write_transfer_end, elapsed_time);
+        if let Err(e) = self.validator.validate(head, body) {
+            self.sample.record_error(e);
+        } else {
+            self.sample.record_latency(elapsed_time);
+            self.sample.record_read_transfer(read_transfer_start, read_transfer_end, elapsed_time);
+            self.sample.record_write_transfer(write_transfer_start, write_transfer_end, elapsed_time);
+        }
+
+        // Submit the sample if it's window interval has elapsed.
+        if self.sample_factory.should_submit(self.last_send_sample) {
+            let old_sample = mem::replace(&mut self.sample, self.sample_factory.new_sample());
+            self.should_stop = self.sample_factory
+                .submit_sample(old_sample)
+                .is_err();
+            self.last_send_sample = Instant::now();
+        }
 
         Ok(())
+    }
+
+    async fn execute_req(&mut self, request: Request<Body>) -> Result<(Parts, Bytes), hyper::Error> {
+        let resp = self.stream.send(request).await?;
+        let (head, body) = resp.into_parts();
+        let body = hyper::body::to_bytes(body).await?;
+        Ok((head, body))
     }
 }
 
