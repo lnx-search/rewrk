@@ -2,6 +2,12 @@
 name = "rewrk-core"
 version = "0.1.0"
 edition = "2021"
+description = "HTTP benchmarking as a library made simple."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/lnx-search/rewrk"
+keywords = ["tokio", "async"]
+categories = ["concurrency", "asynchronous"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
