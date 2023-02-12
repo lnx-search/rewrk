@@ -125,7 +125,7 @@ async fn run_worker<P>(
 {
     let (ready_tx, ready_rx) = oneshot::channel();
     let producer =
-        ProducerActor::spawn(concurrency * 2, worker_id, config.producer, ready_rx)
+        ProducerActor::spawn(concurrency * 4, worker_id, config.producer, ready_rx)
             .await;
     let metadata = SampleMetadata { worker_id };
     let sample_factory =
