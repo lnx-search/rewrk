@@ -99,11 +99,12 @@ pub struct ProducerActor;
 impl ProducerActor {
     /// Spawn a new collector actor for processing incoming samples.
     pub async fn spawn(
+        buffer_size: usize,
         worker_id: usize,
         mut producer: impl Producer,
         ready: oneshot::Receiver<()>,
     ) -> ProducerBatches {
-        let (tx, rx) = flume::bounded(10);
+        let (tx, rx) = flume::bounded(buffer_size);
 
         tokio::spawn(async move {
             info!(worker_id = worker_id, "Starting producer actor.");
