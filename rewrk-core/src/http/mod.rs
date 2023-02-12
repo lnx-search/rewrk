@@ -2,11 +2,11 @@ use tokio_native_tls::TlsConnector;
 
 mod conn;
 
-pub use self::conn::{ReWrkConnection, ReWrkConnector, HttpStream};
+pub use self::conn::{HttpStream, ReWrkConnection, ReWrkConnector};
 
 /// The type of bench that is being ran.
 #[derive(Clone, Copy, Debug)]
-pub enum HttpMode {
+pub enum HttpProtocol {
     /// Sets the http protocol to be used as h1
     HTTP1,
 
@@ -14,7 +14,7 @@ pub enum HttpMode {
     HTTP2,
 }
 
-impl HttpMode {
+impl HttpProtocol {
     pub fn is_http1(&self) -> bool {
         matches!(self, Self::HTTP1)
     }

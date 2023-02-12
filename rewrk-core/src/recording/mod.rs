@@ -1,6 +1,6 @@
-mod sample;
 mod collector;
+mod sample;
 
-pub use sample::{Sample, SampleFactory};
 pub use collector::SampleCollector;
-pub(crate) use collector::CollectorActor;
+pub(crate) use collector::{CollectorActor, CollectorMailbox};
+pub use sample::{Sample, SampleFactory, SampleMetadata};

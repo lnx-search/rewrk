@@ -1,16 +1,16 @@
 use std::fmt::{Debug, Formatter};
-use tokio::time::{Duration, Instant};
-use hdrhistogram::Histogram;
-use flume::TrySendError;
-use crate::recording::collector::{CollectorMailbox};
-use crate::validator::ValidationError;
+use std::time::{Duration, Instant};
 
+use flume::TrySendError;
+use hdrhistogram::Histogram;
+
+use crate::recording::collector::CollectorMailbox;
+use crate::validator::ValidationError;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SampleMetadata {
-    pub thread: usize,
+    pub worker_id: usize,
 }
-
 
 #[derive(Debug, thiserror::Error)]
 #[error("The service should shutdown.")]
@@ -21,11 +21,11 @@ pub struct Shutdown;
 /// A sample factory produces and submits samples.
 pub struct SampleFactory {
     /// The duration which should elapse before a sample
-    ///  is submitted to be processed.
+    /// is submitted to be processed.
     window_timeout: Duration,
-    
+
     /// Metadata associated with the specific sample factory thread.
-    metadata: SampleMetadata,    
+    metadata: SampleMetadata,
     submitter: CollectorMailbox,
 }
 
@@ -39,7 +39,7 @@ impl SampleFactory {
         Self {
             window_timeout,
             metadata,
-            submitter,            
+            submitter,
         }
     }
 
@@ -48,10 +48,12 @@ impl SampleFactory {
     pub fn should_submit(&self, instant: Instant) -> bool {
         self.window_timeout <= instant.elapsed()
     }
-    
+
+    #[inline]
     /// Create a new sample to record metrics.
-    pub fn new_sample(&self) -> Sample {
+    pub fn new_sample(&self, tag: usize) -> Sample {
         Sample {
+            tag,
             latency_hist: Histogram::new(2).unwrap(),
             write_transfer_hist: Histogram::new(2).unwrap(),
             read_transfer_hist: Histogram::new(2).unwrap(),
@@ -60,6 +62,7 @@ impl SampleFactory {
         }
     }
 
+    #[inline]
     /// Attempts to submit a sample to the processor.
     pub fn submit_sample(&self, sample: Sample) -> Result<(), Shutdown> {
         debug!(sample = ?sample, "Submitting sample to processor");
@@ -68,15 +71,17 @@ impl SampleFactory {
 
         match result {
             Ok(()) => Ok(()),
-            Err(TrySendError::Full(_)) => panic!("Sample submitter should never be full."),
+            Err(TrySendError::Full(_)) => {
+                panic!("Sample submitter should never be full.")
+            },
             Err(TrySendError::Disconnected(_)) => Err(Shutdown),
         }
     }
 }
 
-
 #[derive(Clone)]
 pub struct Sample {
+    tag: usize,
     latency_hist: Histogram<u32>,
     write_transfer_hist: Histogram<u32>,
     read_transfer_hist: Histogram<u32>,
@@ -99,20 +104,26 @@ impl Sample {
     pub fn metadata(&self) -> SampleMetadata {
         self.metadata
     }
-    
+
     /// The sample latency histogram
     pub fn latency(&self) -> &Histogram<u32> {
         &self.latency_hist
     }
-    
+
     /// The sample write transfer rate histogram
     pub fn write_transfer(&self) -> &Histogram<u32> {
         &self.write_transfer_hist
     }
-    
+
     /// The sample read transfer rate histogram
     pub fn read_transfer(&self) -> &Histogram<u32> {
         &self.read_transfer_hist
+    }
+
+    #[inline]
+    /// The current sample batch tag.
+    pub fn tag(&self) -> usize {
+        self.tag
     }
 
     #[inline]
@@ -127,9 +138,7 @@ impl Sample {
     /// This value is converted to micro seconds.
     pub fn record_latency(&mut self, dur: Duration) {
         let micros = dur.as_micros() as u64;
-        self.latency_hist
-            .record(micros)
-            .expect("Record value");
+        self.latency_hist.record(micros).expect("Record value");
     }
 
     #[inline]
@@ -158,7 +167,6 @@ impl Sample {
             .expect("Record value");
     }
 }
-
 
 #[inline]
 fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u64 {

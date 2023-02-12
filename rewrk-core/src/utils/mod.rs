@@ -1,3 +1,5 @@
 mod io_usage;
+mod timings;
 
-pub(crate) use io_usage::{RecordStream, IoUsageTracker};
+pub(crate) use io_usage::{IoUsageTracker, RecordStream};
+pub(crate) use timings::RuntimeTimings;

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
+
 use http::response::Parts;
 use hyper::body::Bytes;
 
@@ -22,15 +23,13 @@ pub enum ValidationError {
     Other(Cow<'static, str>),
 }
 
-
 /// A validating utility for checking responses returned by the webserver are correct.
 ///
 /// It's important that these operations are light weight as they are called on the same
 /// runtime as the request runtime which may block operations.
-pub trait ResponseValidator {
+pub trait ResponseValidator: Send + Sync + 'static {
     fn validate(&self, head: Parts, body: Bytes) -> Result<(), ValidationError>;
 }
-
 
 #[derive(Debug)]
 /// The default validator handler.

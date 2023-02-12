@@ -1,57 +1,51 @@
-use std::borrow::Cow;
 use std::future::Future;
-use std::mem;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use http::{Request, Response};
-use http::response::Parts;
 
+use http::response::Parts;
+use http::{header, HeaderValue, Request, Response, Uri};
+use hyper::body::Bytes;
 use hyper::client::conn;
 use hyper::client::conn::SendRequest;
 use hyper::Body;
-use hyper::body::Bytes;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
 use tokio::time::{timeout_at, Duration, Instant};
 
-use crate::http::{HttpMode, Scheme};
-use crate::recording::{Sample, SampleFactory};
-use crate::{ResponseValidator, utils};
+use crate::http::{HttpProtocol, Scheme};
 use crate::utils::IoUsageTracker;
-use crate::validator::ValidationError;
 
 /// The maximum number of attempts to try connect before aborting.
 const RETRY_MAX_DEFAULT: usize = 3;
 
+#[derive(Clone)]
 /// The initial HTTP connector for benchmarking.
 pub struct ReWrkConnector {
+    uri: Uri,
+    host_header: HeaderValue,
     addr: SocketAddr,
-    mode: HttpMode,
+    protocol: HttpProtocol,
     scheme: Scheme,
     host: String,
-    validator: Arc<dyn ResponseValidator>,
     retry_max: usize,
-
-    sample_factory: SampleFactory,
 }
 
 impl ReWrkConnector {
     /// Create a new connector.
     pub fn new(
+        uri: Uri,
+        host_header: HeaderValue,
         addr: SocketAddr,
-        mode: HttpMode,
+        protocol: HttpProtocol,
         scheme: Scheme,
         host: impl Into<String>,
-        sample_factory: SampleFactory,
-        validator: Arc<dyn ResponseValidator>,
     ) -> Self {
         Self {
+            uri,
+            host_header,
             addr,
-            mode,
+            protocol,
             scheme,
-            sample_factory,
-            validator,
             host: host.into(),
             retry_max: RETRY_MAX_DEFAULT,
         }
@@ -106,7 +100,7 @@ impl ReWrkConnector {
     pub async fn connect(&self) -> anyhow::Result<ReWrkConnection> {
         let mut conn_builder = conn::Builder::new();
 
-        if self.mode.is_http2() {
+        if self.protocol.is_http2() {
             conn_builder.http2_only(true);
         }
 
@@ -123,108 +117,71 @@ impl ReWrkConnector {
             },
         };
 
-        Ok(ReWrkConnection::new(usage_tracker, stream, self.sample_factory.clone(), self.validator.clone()))
+        Ok(ReWrkConnection::new(
+            self.uri.clone(),
+            self.host_header.clone(),
+            stream,
+            usage_tracker,
+        ))
     }
 }
 
 /// An established HTTP connection for benchmarking.
 pub struct ReWrkConnection {
+    uri: Uri,
+    host_header: HeaderValue,
     stream: HttpStream,
-
     io_tracker: IoUsageTracker,
-    sample_factory: SampleFactory,
-    sample: Sample,
-    validator: Arc<dyn ResponseValidator>,
-
-    last_send_sample: Instant,
-    should_stop: bool,
 }
 
 impl ReWrkConnection {
+    #[inline]
     /// Creates a new live connection from an existing stream
     fn new(
-        io_tracker: IoUsageTracker,
+        uri: Uri,
+        host_header: HeaderValue,
         stream: HttpStream,
-        sample_factory: SampleFactory,
-        validator: Arc<dyn ResponseValidator>,
+        io_tracker: IoUsageTracker,
     ) -> Self {
-        let sample = sample_factory.new_sample();
-        let last_send_sample = Instant::now();
-
         Self {
-            io_tracker,
+            uri,
+            host_header,
             stream,
-            sample_factory,
-            sample,
-            validator,
-            last_send_sample,
-            should_stop: false,
+            io_tracker,
         }
     }
 
-    /// Send a HTTP request and record the relevant metrics
-    pub async fn send(&mut self, request: Request<Body>) -> Result<(), hyper::Error> {
-        let read_transfer_start = self.io_tracker.get_received_count();
-        let write_transfer_start = self.io_tracker.get_written_count();
-        let start = Instant::now();
-
-        let (head, body) = match self.execute_req(request).await {
-            Ok(resp) => resp,
-            Err(e) => {
-                if e.is_body_write_aborted()
-                    || e.is_closed()
-                    || e.is_connect()
-                {
-                    self.sample.record_error(ValidationError::ConnectionAborted);
-                    self.should_stop = true;
-                } else if e.is_incomplete_message()
-                    || e.is_parse()
-                    || e.is_parse_too_large()
-                    || e.is_parse_status()
-                {
-                    self.sample.record_error(ValidationError::InvalidBody(Cow::Borrowed("invalid-http-body")));
-                } else if e.is_timeout() {
-                    self.sample.record_error(ValidationError::Timeout);
-                } else {
-                    return Err(e);
-                }
-
-                return Ok(())
-            }
-        };
-
-        let elapsed_time = start.elapsed();
-        let read_transfer_end = self.io_tracker.get_received_count();
-        let write_transfer_end = self.io_tracker.get_written_count();
-
-        if let Err(e) = self.validator.validate(head, body) {
-            self.sample.record_error(e);
-        } else {
-            self.sample.record_latency(elapsed_time);
-            self.sample.record_read_transfer(read_transfer_start, read_transfer_end, elapsed_time);
-            self.sample.record_write_transfer(write_transfer_start, write_transfer_end, elapsed_time);
-        }
-
-        // Submit the sample if it's window interval has elapsed.
-        if self.sample_factory.should_submit(self.last_send_sample) {
-            let old_sample = mem::replace(&mut self.sample, self.sample_factory.new_sample());
-            self.should_stop = self.sample_factory
-                .submit_sample(old_sample)
-                .is_err();
-            self.last_send_sample = Instant::now();
-        }
-
-        Ok(())
+    #[inline]
+    pub(crate) fn usage(&self) -> &IoUsageTracker {
+        &self.io_tracker
     }
 
-    async fn execute_req(&mut self, request: Request<Body>) -> Result<(Parts, Bytes), hyper::Error> {
+    #[inline]
+    /// Executes a request.
+    ///
+    /// This will override the request host, scheme, port and host headers.
+    pub(crate) async fn execute_req(
+        &mut self,
+        mut request: Request<Body>,
+    ) -> Result<(Parts, Bytes), hyper::Error> {
+        let request_uri = request.uri();
+        let mut builder = Uri::builder()
+            .scheme(self.uri.scheme().unwrap().clone())
+            .authority(self.uri.authority().unwrap().clone());
+        if let Some(path) = request_uri.path_and_query() {
+            builder = builder.path_and_query(path.clone());
+        }
+        (*request.uri_mut()) = builder.build().unwrap();
+        request
+            .headers_mut()
+            .insert(header::HOST, self.host_header.clone());
+
         let resp = self.stream.send(request).await?;
         let (head, body) = resp.into_parts();
         let body = hyper::body::to_bytes(body).await?;
         Ok((head, body))
     }
 }
-
 
 /// Performs the HTTP handshake
 async fn handshake<S>(
@@ -251,7 +208,10 @@ pub struct HttpStream {
 }
 
 impl HttpStream {
-    pub fn send(&mut self, request: Request<Body>) -> impl Future<Output = Result<Response<Body>, hyper::Error>> {
+    pub fn send(
+        &mut self,
+        request: Request<Body>,
+    ) -> impl Future<Output = Result<Response<Body>, hyper::Error>> {
         self.conn.send_request(request)
     }
 }
