@@ -30,6 +30,53 @@ pub struct Batch {
 
 #[async_trait]
 /// A producer creates requests used in benchmarking
+///
+/// It's important to note that one producer supplies all of a worker thread's
+/// concurrent connections at once.
+///
+/// When a producer returns [RequestBatch::End] workers will finish
+/// the remaining requests then shutdown.
+///
+/// # Example
+///
+/// Here we have a basic implementation that produces `10` batches
+/// of requests for the benchmarker to execute before completing the
+/// benchmark.
+/// ```
+/// use http::{Method, Request, Uri};
+/// use hyper::Body;
+/// use rewrk_core::{Batch, Producer, RequestBatch};
+///
+/// #[derive(Default, Clone)]
+/// pub struct BasicProducer {
+///     count: usize,
+/// }
+///
+/// #[rewrk_core::async_trait]
+/// impl Producer for BasicProducer {
+///     fn ready(&mut self) {
+///         self.count = 10;
+///     }
+///
+///     async fn create_batch(&mut self) -> anyhow::Result<RequestBatch> {
+///         if self.count > 0 {
+///             self.count -= 1;
+///
+///             let uri = Uri::builder().path_and_query("/").build()?;
+///             let request = Request::builder()
+///                 .method(Method::GET)
+///                 .uri(uri)
+///                 .body(Body::empty())?;
+///             Ok(RequestBatch::Batch(Batch {
+///                 tag: 0,
+///                 requests: vec![request],
+///             }))
+///         } else {
+///             Ok(RequestBatch::End)
+///         }
+///     }
+/// }
+/// ```
 pub trait Producer: Send + 'static {
     /// Signals to the producer that the system is ready and about to
     /// start benchmarking.

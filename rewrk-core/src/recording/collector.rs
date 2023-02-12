@@ -14,6 +14,28 @@ pub type CollectorMailbox = Sender<Sample>;
 
 /// A sample collector which waits for and calls the
 /// specific collector handler.
+///
+/// # Example
+///
+/// This basic collector simply appends each sample into a vector which
+/// can then be consumed after the benchmark using `benchmarker.consume_collector().await`
+///
+/// ```
+/// use rewrk_core::{Sample, SampleCollector};
+///
+/// #[derive(Default)]
+/// pub struct BasicCollector {
+///     samples: Vec<Sample>,
+/// }
+///
+/// #[rewrk_core::async_trait]
+/// impl SampleCollector for BasicCollector {
+///     async fn process_sample(&mut self, sample: Sample) -> anyhow::Result<()> {
+///         self.samples.push(sample);
+///         Ok(())
+///     }
+/// }
+/// ```
 pub struct CollectorActor<C>(pub(crate) JoinHandle<C>);
 
 impl<C> CollectorActor<C>

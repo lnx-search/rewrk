@@ -81,6 +81,13 @@ impl SampleFactory {
 }
 
 #[derive(Clone)]
+/// A collection of metrics taken from the benchmark for a given time window.
+///
+/// The sample contains the standard metrics (latency, IO, etc...) along with
+/// any errors, the worker ID and sample tag which can be used to group results.
+///
+/// Internally this uses HDR Histograms which can generate the min, max, stdev and
+/// varying percentile statistics of the benchmark.
 pub struct Sample {
     tag: usize,
     latency_hist: Histogram<u32>,
@@ -129,7 +136,7 @@ impl Sample {
 
     #[inline]
     /// Record a request validation error.
-    pub fn record_error(&mut self, e: ValidationError) {
+    pub(crate) fn record_error(&mut self, e: ValidationError) {
         self.errors.push(e);
     }
 
@@ -137,14 +144,14 @@ impl Sample {
     /// Record a latency duration.
     ///
     /// This value is converted to micro seconds.
-    pub fn record_latency(&mut self, dur: Duration) {
+    pub(crate) fn record_latency(&mut self, dur: Duration) {
         let micros = dur.as_micros() as u64;
         self.latency_hist.record(micros).expect("Record value");
     }
 
     #[inline]
     /// Record a write transfer rate.
-    pub fn record_write_transfer(
+    pub(crate) fn record_write_transfer(
         &mut self,
         start_count: u64,
         end_count: u64,
@@ -157,7 +164,7 @@ impl Sample {
 
     #[inline]
     /// Record a read transfer rate.
-    pub fn record_read_transfer(
+    pub(crate) fn record_read_transfer(
         &mut self,
         start_count: u64,
         end_count: u64,

@@ -22,7 +22,14 @@ use crate::{
     Scheme,
 };
 
+/// The default percentage workers must be waiting on
+/// producers for in order to raise a warning.
+///
+/// The default of `5%` here is fairly arbitrary but it's a safe
+/// default without being too annoying.
 pub const DEFAULT_WAIT_WARNING_THRESHOLD: f32 = 5.0;
+/// The default period of time that should elapse before
+/// a [Sample](crate::Sample) is sent to a collector.
 pub const DEFAULT_WINDOW_DURATION: Duration = Duration::from_secs(10);
 
 #[derive(Debug, thiserror::Error)]
@@ -44,6 +51,15 @@ pub enum Error {
     AddressLookup(io::Error),
 }
 
+/// The core benchmarker runtime.
+///
+/// Once a benchmarker is created you can run the benchmark
+/// several times using the `run` method which returns a future
+/// that will complete once the benchmark is over.
+///
+/// By default this system will use `n - 1` worker threads where `n`
+/// is the number of logical CPU cores available, this can be
+/// overriden using the [ReWrkBenchmark::set_num_workers] method.
 pub struct ReWrkBenchmark<P, C>
 where
     P: Producer + Clone,
@@ -61,7 +77,7 @@ where
     P: Producer + Clone,
     C: SampleCollector,
 {
-    /// Creates a new [ReWrkRuntime].
+    /// Creates a new [ReWrkBenchmark].
     ///
     /// This sets up the connector and collector actor.
     ///
