@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign};
 use std::time::Duration;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct RuntimeTimings {
     /// The total runtime duration waiting on the producer.
     pub producer_wait_runtime: Duration,

@@ -215,3 +215,9 @@ impl HttpStream {
         self.conn.send_request(request)
     }
 }
+
+impl Drop for HttpStream {
+    fn drop(&mut self) {
+        self.waiter.abort();
+    }
+}

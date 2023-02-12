@@ -134,6 +134,12 @@ where
         self.shutdown.set_abort();
     }
 
+    /// Sets the maximum number of times the connector will attempt
+    /// to connect to the server before error.
+    pub fn set_connection_retry_max(&mut self, max: usize) {
+        self.worker_config.connector.set_retry_max(max)
+    }
+
     /// Sets the benchmark validator.
     pub fn set_validator(&mut self, validator: impl ResponseValidator) {
         self.worker_config.validator = Arc::new(validator);

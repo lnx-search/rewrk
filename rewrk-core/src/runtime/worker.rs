@@ -100,11 +100,14 @@ fn spawn_worker<P>(
     std::thread::Builder::new()
         .name(format!("rewrk-worker-{worker_id}"))
         .spawn(move || {
+            debug!(worker_id = worker_id, "Spawning worker");
             rt.block_on(run_worker(worker_id, concurrency, handle, config));
 
             // Drop the guard explicitly to make sure it's not dropped
             // until after the runtime has completed.
             drop(guard);
+
+            debug!(worker_id = worker_id, "Worker successfully shutdown");
         })
         .expect("Spawn thread");
 }
@@ -305,11 +308,6 @@ impl WorkerConnection {
         }
     }
 
-    /// Checks if the worker should abort processing.
-    fn should_abort(&self) -> bool {
-        self.shutdown.should_abort()
-    }
-
     /// Sets the abort flag across workers.
     fn set_abort(&self) {
         self.shutdown.set_abort()
@@ -345,7 +343,10 @@ impl WorkerConnection {
             self.timings.producer_wait_runtime += producer_elapsed;
         }
 
+        let execute_start = Instant::now();
         self.execute_batch(batch).await;
+        self.timings.execute_wait_runtime += execute_start.elapsed();
+
         true
     }
 

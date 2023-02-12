@@ -25,7 +25,7 @@ where
         let (tx, rx) = flume::unbounded();
 
         let handle = tokio::spawn(async move {
-            info!("Starting collector actor.");
+            info!("Starting collector actor");
 
             while let Ok(sample) = rx.recv_async().await {
                 trace!(sample = ?sample, "Collector actor received processing sample.");

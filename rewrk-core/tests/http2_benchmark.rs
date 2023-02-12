@@ -2,7 +2,6 @@ use axum::routing::get;
 use axum::Router;
 use http::{Method, Request, Uri};
 use hyper::Body;
-use tracing::info;
 use rewrk_core::{
     Batch,
     HttpProtocol,
@@ -13,7 +12,7 @@ use rewrk_core::{
     SampleCollector,
 };
 
-static ADDR: &str = "127.0.0.1:19999";
+static ADDR: &str = "127.0.0.1:200000";
 
 #[tokio::test]
 async fn test_basic_benchmark() {
@@ -31,7 +30,7 @@ async fn test_basic_benchmark() {
     let mut benchmarker = ReWrkBenchmark::create(
         uri,
         1,
-        HttpProtocol::HTTP1,
+        HttpProtocol::HTTP2,
         BasicProducer::default(),
         BasicCollector::default(),
     )

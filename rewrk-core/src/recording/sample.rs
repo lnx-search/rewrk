@@ -163,7 +163,7 @@ impl Sample {
         end_count: u64,
         dur: Duration,
     ) {
-        self.write_transfer_hist
+        self.read_transfer_hist
             .record(calculate_rate(start_count, end_count, dur))
             .expect("Record value");
     }
@@ -171,5 +171,5 @@ impl Sample {
 
 #[inline]
 fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u64 {
-    (stop - start) / dur.as_secs()
+    ((stop - start) as f64 / dur.as_secs_f64()).round() as u64
 }
