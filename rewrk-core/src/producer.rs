@@ -131,7 +131,7 @@ impl ProducerActor {
                     batch_tag = batch.tag,
                     "Submitting request batch."
                 );
-                if let Err(_) = tx.send_async(batch).await {
+                if tx.send_async(batch).await.is_err() {
                     break;
                 }
             }
