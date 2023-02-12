@@ -19,3 +19,8 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "macros"] }
 tokio-native-tls = "0.3"
 tower = { version = "0.4", features = ["util"] }
+
+[workspace]
+members = [
+    "rewrk-core"
+]

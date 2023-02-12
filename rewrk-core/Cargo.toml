@@ -1,0 +1,36 @@
+[package]
+name = "rewrk-core"
+version = "0.1.0"
+edition = "2021"
+description = "HTTP benchmarking as a library made simple."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/lnx-search/rewrk"
+keywords = ["tokio", "async"]
+categories = ["concurrency", "asynchronous"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+futures-util = "0.3"
+http = "0.2"
+pin-project-lite = "0.2"
+flume = "0.10.14"
+hdrhistogram = "7"
+thiserror = "1"
+async-trait = "0.1.64"
+tracing = "0.1.37"
+num_cpus = "1.15.0"
+
+hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
+native-tls = { version = "0.2", features = ["alpn"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net"] }
+tokio-native-tls = "0.3"
+tower = { version = "0.4", features = ["util"] }
+
+[dev-dependencies]
+axum = "0.6.5"
+tracing-subscriber = "0.3.16"
+
+tokio = { version = "1", features = ["full"] }
