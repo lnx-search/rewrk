@@ -10,7 +10,7 @@ use hyper::Body;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 
-use crate::http::{ReWrkConnection, ReWrkConnector};
+use crate::connection::{ReWrkConnection, ReWrkConnector};
 use crate::producer::{Batch, Producer, ProducerActor, ProducerBatches};
 use crate::recording::{CollectorMailbox, SampleFactory, SampleMetadata};
 use crate::utils::RuntimeTimings;
@@ -227,6 +227,9 @@ async fn create_worker_connection(
                 break;
             }
         }
+
+        // Submit the remaining sample.
+        connection.submit_sample(0);
 
         connection.timings
     };

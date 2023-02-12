@@ -11,10 +11,16 @@ use http::{HeaderValue, Uri};
 use tokio_native_tls::TlsConnector;
 
 pub(crate) use self::worker::{spawn_workers, ShutdownHandle, WorkerConfig};
-use crate::http::ReWrkConnector;
+use crate::connection::ReWrkConnector;
 use crate::producer::Producer;
 use crate::recording::CollectorActor;
-use crate::{HttpProtocol, ResponseValidator, SampleCollector, Scheme};
+use crate::{
+    DefaultValidator,
+    HttpProtocol,
+    ResponseValidator,
+    SampleCollector,
+    Scheme,
+};
 
 pub const DEFAULT_WAIT_WARNING_THRESHOLD: f32 = 5.0;
 pub const DEFAULT_WINDOW_DURATION: Duration = Duration::from_secs(10);
@@ -38,20 +44,22 @@ pub enum Error {
     AddressLookup(io::Error),
 }
 
-#[derive(Clone)]
-pub struct ReWrkBenchmark<P>
+pub struct ReWrkBenchmark<P, C>
 where
     P: Producer + Clone,
+    C: SampleCollector,
 {
     shutdown: ShutdownHandle,
+    collector_handle: CollectorActor<C>,
     num_workers: usize,
     concurrency: usize,
     worker_config: WorkerConfig<P>,
 }
 
-impl<P> ReWrkBenchmark<P>
+impl<P, C> ReWrkBenchmark<P, C>
 where
     P: Producer + Clone,
+    C: SampleCollector,
 {
     /// Creates a new [ReWrkRuntime].
     ///
@@ -63,15 +71,14 @@ where
         concurrency: usize,
         protocol: HttpProtocol,
         producer: P,
-        validator: impl ResponseValidator,
-        collector: impl SampleCollector,
+        collector: C,
     ) -> Result<Self, Error> {
         let connector = create_connector(base_uri, protocol)?;
-        let collector = CollectorActor::spawn(collector).await;
+        let (collector_handle, collector) = CollectorActor::spawn(collector).await;
         let shutdown = ShutdownHandle::default();
         let worker_config = WorkerConfig {
             connector,
-            validator: Arc::new(validator),
+            validator: Arc::new(DefaultValidator),
             collector,
             producer,
             sample_window: DEFAULT_WINDOW_DURATION,
@@ -82,6 +89,7 @@ where
 
         Ok(Self {
             shutdown,
+            collector_handle,
             num_workers,
             concurrency,
             worker_config,
@@ -93,6 +101,12 @@ where
     /// This returns a future which will complete once all
     /// workers for the benchmark have completed.
     pub fn run(&self) -> impl Future<Output = ()> {
+        info!(
+            num_workers = self.num_workers,
+            concurrency = self.concurrency,
+            "Starting benchmark."
+        );
+
         let waiter = spawn_workers(
             self.shutdown.clone(),
             self.num_workers,
@@ -105,9 +119,24 @@ where
         }
     }
 
+    /// Shuts the benchmarker down and returns the
+    /// collector once complete.
+    pub async fn consume_collector(self) -> C {
+        self.shutdown();
+        drop(self.worker_config);
+
+        let handle = self.collector_handle;
+        handle.0.await.expect("Join task")
+    }
+
     /// Sets the shutdown flag for the running benchmark.
     pub fn shutdown(&self) {
         self.shutdown.set_abort();
+    }
+
+    /// Sets the benchmark validator.
+    pub fn set_validator(&mut self, validator: impl ResponseValidator) {
+        self.worker_config.validator = Arc::new(validator);
     }
 
     /// Set the number of workers to spawn.

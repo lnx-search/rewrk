@@ -12,7 +12,7 @@ use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
 use tokio::time::{timeout_at, Duration, Instant};
 
-use crate::http::{HttpProtocol, Scheme};
+use crate::connection::{HttpProtocol, Scheme};
 use crate::utils::IoUsageTracker;
 
 /// The maximum number of attempts to try connect before aborting.

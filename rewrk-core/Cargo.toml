@@ -10,9 +10,6 @@ anyhow = "1"
 futures-util = "0.3"
 http = "0.2"
 pin-project-lite = "0.2"
-regex = "1"
-rand = "0.8"
-serde_json = "1"
 flume = "0.10.14"
 hdrhistogram = "7"
 thiserror = "1"
@@ -22,6 +19,12 @@ num_cpus = "1.15.0"
 
 hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
 native-tls = { version = "0.2", features = ["alpn"] }
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "macros"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net"] }
 tokio-native-tls = "0.3"
 tower = { version = "0.4", features = ["util"] }
+
+[dev-dependencies]
+axum = "0.6.5"
+tracing-subscriber = "0.3.16"
+
+tokio = { version = "1", features = ["full"] }

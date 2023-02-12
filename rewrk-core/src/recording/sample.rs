@@ -9,6 +9,7 @@ use crate::validator::ValidationError;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SampleMetadata {
+    /// The unique ID of the worker thread.
     pub worker_id: usize,
 }
 
