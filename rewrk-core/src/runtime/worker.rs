@@ -101,12 +101,7 @@ fn spawn_worker<P>(
         .name(format!("rewrk-worker-{worker_id}"))
         .spawn(move || {
             debug!(worker_id = worker_id, "Spawning worker");
-            rt.block_on(run_worker(
-                worker_id,
-                concurrency,
-                handle,
-                config,
-            ));
+            rt.block_on(run_worker(worker_id, concurrency, handle, config));
 
             // Drop the guard explicitly to make sure it's not dropped
             // until after the runtime has completed.
@@ -129,7 +124,9 @@ async fn run_worker<P>(
     P: Producer + Clone,
 {
     let (ready_tx, ready_rx) = oneshot::channel();
-    let producer = ProducerActor::spawn(concurrency * 2, worker_id, config.producer, ready_rx).await;
+    let producer =
+        ProducerActor::spawn(concurrency * 2, worker_id, config.producer, ready_rx)
+            .await;
     let metadata = SampleMetadata { worker_id };
     let sample_factory =
         SampleFactory::new(config.sample_window, metadata, config.collector);

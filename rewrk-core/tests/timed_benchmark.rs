@@ -1,4 +1,5 @@
 use std::time::{Duration, Instant};
+
 use axum::routing::get;
 use axum::Router;
 use http::{Method, Request, Uri};
@@ -99,10 +100,7 @@ impl Producer for TimedProducer {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(RequestBatch::Batch(Batch {
-            tag: 0,
-            requests,
-        }))
+        Ok(RequestBatch::Batch(Batch { tag: 0, requests }))
     }
 }
 
