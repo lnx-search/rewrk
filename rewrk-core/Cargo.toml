@@ -24,7 +24,7 @@ tracing = "0.1.37"
 num_cpus = "1.15.0"
 
 hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
-native-tls = { version = "0.2", features = ["alpn", "vendored"] }
+native-tls = { version = "0.2", features = ["alpn"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "net"] }
 tokio-native-tls = "0.3"
 tower = { version = "0.4", features = ["util"] }

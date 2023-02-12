@@ -5,7 +5,7 @@ WORKDIR /code
 COPY . /code
 
 RUN apt-get update \
-    && apt-get install -y ca-certificates libssl-dev pkg-config \
+    && apt-get install -y libssl-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo build --release
@@ -17,9 +17,9 @@ WORKDIR /etc/rewrk
 
 USER root
 RUN apt-get update \
-    && apt-get install -y ca-certificates libssl-dev pkg-config \
+    && apt-get install -y ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /code/target/release/rewrk /
+COPY --from=build /code/target/release/rewrk .
 
 ENTRYPOINT ["./rewrk"]
