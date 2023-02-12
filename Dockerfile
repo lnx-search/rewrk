@@ -14,7 +14,7 @@ WORKDIR /etc/rewrk
 USER root
 RUN apt-get update \
     && apt-get install -y ca-certificates libssl-dev pkg-config \
-    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /code/target/release/rewrk /
 
