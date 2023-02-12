@@ -24,7 +24,7 @@ impl HttpProtocol {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// The HTTP scheme used for the connection.
 pub enum Scheme {
     Http,
