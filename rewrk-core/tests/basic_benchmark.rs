@@ -2,7 +2,6 @@ use axum::routing::get;
 use axum::Router;
 use http::{Method, Request, Uri};
 use hyper::Body;
-use tracing::info;
 use rewrk_core::{
     Batch,
     HttpProtocol,

@@ -12,7 +12,7 @@ use rewrk_core::{
     SampleCollector,
 };
 
-static ADDR: &str = "127.0.0.1:200000";
+static ADDR: &str = "127.0.0.1:20000";
 
 #[tokio::test]
 async fn test_basic_benchmark() {
