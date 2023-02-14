@@ -7,9 +7,10 @@ use colored::*;
 use futures_util::StreamExt;
 use hyper::body::Bytes;
 
+use crate::http;
 use crate::results::WorkerResult;
+use crate::runtime::{self, BenchmarkRuntime};
 use crate::utils::div_mod;
-use crate::{http, runtime};
 
 /// The customisable settings that build the benchmark's behaviour.
 #[derive(Clone, Debug)]
@@ -51,7 +52,8 @@ pub struct BenchmarkSettings {
 
 /// Builds the runtime with the given settings and blocks on the main future.
 pub fn start_benchmark(settings: BenchmarkSettings) {
-    let rt = runtime::get_rt(settings.threads);
+    let rt = runtime::get_rt();
+    let mut bench_rt = runtime::get_bench_rt(settings.threads);
     let rounds = settings.rounds;
     let is_json = settings.display_json;
     for i in 0..rounds {
@@ -59,7 +61,7 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
             println!("Beginning round {}...", i + 1);
         }
 
-        if let Err(e) = rt.block_on(run(settings.clone())) {
+        if let Err(e) = rt.block_on(run(settings.clone(), &mut bench_rt)) {
             eprintln!();
             eprintln!("{}", e);
             return;
@@ -82,10 +84,11 @@ pub fn start_benchmark(settings: BenchmarkSettings) {
 /// extracted from the handle.
 ///
 /// The results are then merged into a single set of averages across workers.
-async fn run(settings: BenchmarkSettings) -> Result<()> {
+async fn run(settings: BenchmarkSettings, rt: &mut BenchmarkRuntime) -> Result<()> {
     let predict_size = settings.duration.as_secs() * 10_000;
 
     let handles = http::start_tasks(
+        rt,
         settings.duration,
         settings.connections,
         settings.host.trim().to_string(),

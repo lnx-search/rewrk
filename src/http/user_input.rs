@@ -91,7 +91,19 @@ impl UserInput {
         let port = authority
             .port_u16()
             .unwrap_or_else(|| scheme.default_port());
-        let host_header = HeaderValue::from_str(&host)?;
+        let host_header = if port == 80 {
+            HeaderValue::from_str(&host)?
+        } else {
+            HeaderValue::from_str(&format!("{}:{}", host, port))?
+        };
+
+        let uri = match protocol {
+            BenchType::HTTP1 => match uri.path_and_query() {
+                Some(pq) => Uri::try_from(pq.as_str())?,
+                None => Uri::try_from(uri.path())?,
+            },
+            BenchType::HTTP2 => uri,
+        };
 
         // Prefer ipv4.
         let addr_iter = (host.as_str(), port).to_socket_addrs()?;

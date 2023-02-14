@@ -21,11 +21,12 @@ use tower::Service;
 use self::usage::Usage;
 use self::user_input::{Scheme, UserInput};
 use crate::results::WorkerResult;
+use crate::runtime::BenchmarkRuntime;
 
 mod usage;
 mod user_input;
 
-pub type Handle = JoinHandle<anyhow::Result<WorkerResult>>;
+type ReturnFuture = JoinHandle<anyhow::Result<WorkerResult>>;
 
 /// The type of bench that is being ran.
 #[derive(Clone, Copy, Debug)]
@@ -48,6 +49,7 @@ impl BenchType {
 }
 
 pub async fn start_tasks(
+    rt: &mut BenchmarkRuntime,
     time_for: Duration,
     connections: usize,
     uri_string: String,
@@ -56,7 +58,7 @@ pub async fn start_tasks(
     headers: HeaderMap,
     body: Bytes,
     _predicted_size: usize,
-) -> anyhow::Result<FuturesUnordered<Handle>> {
+) -> anyhow::Result<FuturesUnordered<ReturnFuture>> {
     let deadline = Instant::now() + time_for;
     let user_input =
         UserInput::new(bench_type, uri_string, method, headers, body).await?;
@@ -64,7 +66,7 @@ pub async fn start_tasks(
     let handles = FuturesUnordered::new();
 
     for _ in 0..connections {
-        let handle = tokio::spawn(benchmark(deadline, bench_type, user_input.clone()));
+        let handle = rt.spawn(benchmark(deadline, bench_type, user_input.clone()));
 
         handles.push(handle);
     }
