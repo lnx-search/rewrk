@@ -58,6 +58,7 @@ impl SampleFactory {
             tag,
             total_duration: Default::default(),
             total_latency_duration: Default::default(),
+            total_requests: 0,
             total_successful_requests: 0,
             latency_hist: Histogram::new(2).unwrap(),
             write_transfer_hist: Histogram::new(2).unwrap(),
