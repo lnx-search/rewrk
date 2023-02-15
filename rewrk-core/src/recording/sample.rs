@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::ops::{Add, AddAssign};
 use std::time::{Duration, Instant};
 
 use flume::TrySendError;
@@ -55,6 +56,9 @@ impl SampleFactory {
     pub fn new_sample(&self, tag: usize) -> Sample {
         Sample {
             tag,
+            total_duration: Default::default(),
+            total_latency_duration: Default::default(),
+            total_successful_requests: 0,
             latency_hist: Histogram::new(2).unwrap(),
             write_transfer_hist: Histogram::new(2).unwrap(),
             read_transfer_hist: Histogram::new(2).unwrap(),
@@ -90,6 +94,11 @@ impl SampleFactory {
 /// varying percentile statistics of the benchmark.
 pub struct Sample {
     tag: usize,
+    total_duration: Duration,
+    total_latency_duration: Duration,
+    total_requests: usize,
+    total_successful_requests: usize,
+
     latency_hist: Histogram<u32>,
     write_transfer_hist: Histogram<u32>,
     read_transfer_hist: Histogram<u32>,
@@ -101,13 +110,35 @@ pub struct Sample {
 impl Debug for Sample {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Sample")
-            .field("num_records", &self.latency().len())
+            .field("num_records", &self.total_successful_requests)
             .field("metadata", &self.metadata)
             .finish()
     }
 }
 
 impl Sample {
+    /// The total number of requests within the sample including any errors.
+    pub fn total_requests(&self) -> usize {
+        self.total_requests
+    }
+
+    /// The total number of requests within the sample that passed validation
+    /// and did not error.
+    pub fn total_successful_requests(&self) -> usize {
+        self.total_successful_requests
+    }
+
+    /// The total duration of requests within the sample.
+    pub fn total_duration(&self) -> Duration {
+        self.total_duration
+    }
+
+    /// The total duration of requests within the sample from the latency of
+    /// each request.
+    pub fn total_latency_duration(&self) -> Duration {
+        self.total_latency_duration
+    }
+
     /// The sample metadata.
     pub fn metadata(&self) -> SampleMetadata {
         self.metadata
@@ -128,10 +159,33 @@ impl Sample {
         &self.read_transfer_hist
     }
 
+    /// The errors that occurred during the sample
+    pub fn errors(&self) -> &[ValidationError] {
+        &self.errors
+    }
+
     #[inline]
     /// The current sample batch tag.
     pub fn tag(&self) -> usize {
         self.tag
+    }
+
+    #[inline]
+    /// Record a request validation error.
+    pub(crate) fn record_successful_request(&mut self) {
+        self.total_successful_requests += 1;
+    }
+
+    #[inline]
+    /// Record a request validation error.
+    pub(crate) fn record_total_request(&mut self) {
+        self.total_requests += 1;
+    }
+
+    #[inline]
+    /// Record a request validation error.
+    pub(crate) fn set_total_duration(&mut self, dur: Duration) {
+        self.total_duration = dur;
     }
 
     #[inline]
@@ -145,6 +199,7 @@ impl Sample {
     ///
     /// This value is converted to micro seconds.
     pub(crate) fn record_latency(&mut self, dur: Duration) {
+        self.total_latency_duration += dur;
         let micros = dur.as_micros() as u64;
         self.latency_hist.record(micros).expect("Record value");
     }
@@ -173,6 +228,27 @@ impl Sample {
         self.read_transfer_hist
             .record(calculate_rate(start_count, end_count, dur))
             .expect("Record value");
+    }
+}
+
+impl Add for Sample {
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl AddAssign for Sample {
+    fn add_assign(&mut self, rhs: Self) {
+        self.total_duration += rhs.total_duration;
+        self.total_latency_duration += rhs.total_latency_duration;
+        self.total_successful_requests += rhs.total_successful_requests;
+        self.latency_hist += rhs.latency_hist;
+        self.write_transfer_hist += rhs.write_transfer_hist;
+        self.read_transfer_hist += rhs.read_transfer_hist;
+        self.errors.extend(rhs.errors);
     }
 }
 

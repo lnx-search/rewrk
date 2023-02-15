@@ -319,7 +319,8 @@ impl WorkerConnection {
     /// sample with a given tag.
     fn submit_sample(&mut self, next_sample_tag: usize) -> bool {
         let new_sample = self.sample_factory.new_sample(next_sample_tag);
-        let old_sample = mem::replace(&mut self.sample, new_sample);
+        let mut old_sample = mem::replace(&mut self.sample, new_sample);
+        old_sample.set_total_duration(self.last_sent_sample.elapsed());
         if self.sample_factory.submit_sample(old_sample).is_err() {
             return false;
         }
@@ -341,6 +342,7 @@ impl WorkerConnection {
 
         if self.is_first_batch {
             self.is_first_batch = false;
+            self.last_sent_sample = Instant::now();
         } else {
             self.timings.producer_wait_runtime += producer_elapsed;
         }
@@ -383,6 +385,8 @@ impl WorkerConnection {
 
     /// Send a HTTP request and record the relevant metrics
     async fn send(&mut self, request: Request<Body>) -> Result<bool, hyper::Error> {
+        self.sample.record_total_request();
+
         let read_transfer_start = self.conn.usage().get_received_count();
         let write_transfer_start = self.conn.usage().get_written_count();
         let start = Instant::now();
@@ -418,6 +422,7 @@ impl WorkerConnection {
         if let Err(e) = self.validator.validate(head, body) {
             self.sample.record_error(e);
         } else {
+            self.sample.record_successful_request();
             self.sample.record_latency(elapsed_time);
             self.sample.record_read_transfer(
                 read_transfer_start,
