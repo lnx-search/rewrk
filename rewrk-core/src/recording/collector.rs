@@ -44,12 +44,14 @@ where
 {
     /// Spawn a new collector actor for processing incoming samples.
     pub async fn spawn(mut collector: C) -> (Self, CollectorMailbox) {
-        let (tx, rx) = flume::unbounded();
+        let (tx, rx) = flume::unbounded::<Sample>();
 
         let handle = tokio::spawn(async move {
             info!("Starting collector actor");
 
-            while let Ok(sample) = rx.recv_async().await {
+            while let Ok(mut sample) = rx.recv_async().await {
+                sample.sort_values();
+
                 trace!(sample = ?sample, "Collector actor received processing sample.");
                 if let Err(e) = collector.process_sample(sample).await {
                     warn!(error = ?e, "Collector failed to process sample due to error.");

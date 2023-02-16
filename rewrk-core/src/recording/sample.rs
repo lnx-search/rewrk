@@ -1,9 +1,9 @@
+use std::cmp::Reverse;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, AddAssign};
 use std::time::{Duration, Instant};
 
 use flume::TrySendError;
-use hdrhistogram::Histogram;
 
 use crate::recording::collector::CollectorMailbox;
 use crate::validator::ValidationError;
@@ -60,9 +60,9 @@ impl SampleFactory {
             total_latency_duration: Default::default(),
             total_requests: 0,
             total_successful_requests: 0,
-            latency_hist: Histogram::new_with_max(6e+7 as u64, 5).unwrap(),
-            write_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
-            read_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
+            latency: Vec::with_capacity(5 << 10),
+            write_transfer: Vec::with_capacity(5 << 10),
+            read_transfer: Vec::with_capacity(5 << 10),
             errors: Vec::with_capacity(4),
             metadata: self.metadata,
         }
@@ -100,9 +100,9 @@ pub struct Sample {
     total_requests: usize,
     total_successful_requests: usize,
 
-    latency_hist: Histogram<u32>,
-    write_transfer_hist: Histogram<u32>,
-    read_transfer_hist: Histogram<u32>,
+    latency: Vec<Duration>,
+    write_transfer: Vec<u32>,
+    read_transfer: Vec<u32>,
 
     errors: Vec<ValidationError>,
     metadata: SampleMetadata,
@@ -118,6 +118,13 @@ impl Debug for Sample {
 }
 
 impl Sample {
+    /// Sorts the sample values from largest to smallest.
+    pub(crate) fn sort_values(&mut self) {
+        self.latency.sort_by_key(|v| Reverse(*v));
+        self.write_transfer.sort_by_key(|v| Reverse(*v));
+        self.read_transfer.sort_by_key(|v| Reverse(*v));
+    }
+
     /// The total number of requests within the sample including any errors.
     pub fn total_requests(&self) -> usize {
         self.total_requests
@@ -145,19 +152,49 @@ impl Sample {
         self.metadata
     }
 
-    /// The sample latency histogram
-    pub fn latency(&self) -> &Histogram<u32> {
-        &self.latency_hist
+    /// The sample latency
+    pub fn latency(&self) -> &[Duration] {
+        &self.latency
     }
 
-    /// The sample write transfer rate histogram
-    pub fn write_transfer(&self) -> &Histogram<u32> {
-        &self.write_transfer_hist
+    /// The sample write transfer rate
+    pub fn write_transfer(&self) -> &[u32] {
+        &self.write_transfer
     }
 
-    /// The sample read transfer rate histogram
-    pub fn read_transfer(&self) -> &Histogram<u32> {
-        &self.read_transfer_hist
+    /// The sample read transfer rate
+    pub fn read_transfer(&self) -> &[u32] {
+        &self.read_transfer
+    }
+
+    /// Calculates the mean average from a given percentile set of values.
+    pub fn latency_percentile_mean(&self, pct: f64) -> Duration {
+        get_latency_percentile_mean(&self.latency(), pct)
+    }
+
+    /// Calculates the mean average from a given percentile set of values.
+    pub fn write_transfer_percentile_mean(&self, pct: f64) -> f64 {
+        get_transfer_percentile_mean(&self.write_transfer(), pct)
+    }
+
+    /// Calculates the mean average from a given percentile set of values.
+    pub fn read_transfer_percentile_mean(&self, pct: f64) -> f64 {
+        get_transfer_percentile_mean(&self.read_transfer(), pct)
+    }
+
+    /// Calculates the nth percentile of values.
+    pub fn latency_percentile(&self, pct: f64) -> Duration {
+        get_percentile(&self.latency(), pct)
+    }
+
+    /// Calculates the nth percentile of values.
+    pub fn write_transfer_percentile(&self, pct: f64) -> u32 {
+        get_percentile(&self.write_transfer(), pct)
+    }
+
+    /// Calculates the nth percentile of values.
+    pub fn read_transfer_percentile(&self, pct: f64) -> u32 {
+        get_percentile(&self.read_transfer(), pct)
     }
 
     /// The errors that occurred during the sample
@@ -201,8 +238,7 @@ impl Sample {
     /// This value is converted to micro seconds.
     pub(crate) fn record_latency(&mut self, dur: Duration) {
         self.total_latency_duration += dur;
-        let micros = dur.as_micros() as u64;
-        self.latency_hist.record(micros).expect("Record value");
+        self.latency.push(dur);
     }
 
     #[inline]
@@ -213,9 +249,8 @@ impl Sample {
         end_count: u64,
         dur: Duration,
     ) {
-        self.write_transfer_hist
-            .record(calculate_rate(start_count, end_count, dur))
-            .expect("Record value");
+        self.write_transfer
+            .push(calculate_rate(start_count, end_count, dur));
     }
 
     #[inline]
@@ -226,9 +261,8 @@ impl Sample {
         end_count: u64,
         dur: Duration,
     ) {
-        self.read_transfer_hist
-            .record(calculate_rate(start_count, end_count, dur))
-            .expect("Record value");
+        self.read_transfer
+            .push(calculate_rate(start_count, end_count, dur));
     }
 }
 
@@ -247,14 +281,62 @@ impl AddAssign for Sample {
         self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
         self.total_latency_duration += rhs.total_latency_duration;
-        self.latency_hist += rhs.latency_hist;
-        self.write_transfer_hist += rhs.write_transfer_hist;
-        self.read_transfer_hist += rhs.read_transfer_hist;
+        self.latency.extend(rhs.latency);
+        self.read_transfer.extend(rhs.read_transfer);
+        self.write_transfer.extend(rhs.write_transfer);
         self.errors.extend(rhs.errors);
     }
 }
 
 #[inline]
-fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u64 {
-    ((stop - start) as f64 / dur.as_secs_f64()).round() as u64
+fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u32 {
+    ((stop - start) as f64 / dur.as_secs_f64()).round() as u32
+}
+
+
+/// Calculates the mean latency from a percentile of the response times.
+fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
+    let mut len = samples.len() as f64 * pct;
+    if len < 1.0 {
+        len = 1.0;
+    }
+
+    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let pct = samples.chunks(len as usize).next().expect(&e);
+
+    let total: f64 = pct.iter().map(|dur| dur.as_secs_f64()).sum();
+
+    let avg = total / pct.len() as f64;
+
+    Duration::from_secs_f64(avg)
+}
+
+/// Calculates the mean latency from a percentile of the response times.
+fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
+    let mut len = samples.len() as f64 * pct;
+    if len < 1.0 {
+        len = 1.0;
+    }
+
+    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let pct = samples.chunks(len as usize).next().expect(&e);
+
+    let total: u64 = pct.iter().map(|v| *v as u64).sum();
+
+    let avg = total as f64 / pct.len() as f64;
+
+    avg
+}
+
+
+fn get_percentile<V: Copy>(samples: &[V], pct: f64) -> V {
+    let mut len = samples.len() as f64 * pct;
+    if len < 1.0 {
+        len = 1.0;
+    }
+
+    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let pct = samples.chunks(len as usize).next().expect(&e);
+
+    *pct.iter().next().unwrap()
 }
