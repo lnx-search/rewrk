@@ -418,12 +418,16 @@ fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u32 {
 
 /// Calculates the mean latency from a percentile of the response times.
 fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
+    if samples.is_empty() {
+        return Duration::default()
+    }
+
     let mut len = samples.len() as f64 * pct;
     if len < 1.0 {
         len = 1.0;
     }
 
-    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let e = format!("failed to calculate P{} avg latency", pct * 100.0);
     let pct = samples.chunks(len as usize).next().expect(&e);
 
     let total: f64 = pct.iter().map(|dur| dur.as_secs_f64()).sum();
@@ -435,12 +439,16 @@ fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
 
 /// Calculates the mean latency from a percentile of the response times.
 fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
+    if samples.is_empty() {
+        return 0.0
+    }
+
     let mut len = samples.len() as f64 * pct;
     if len < 1.0 {
         len = 1.0;
     }
 
-    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let e = format!("failed to calculate P{} avg", pct * 100.0);
     let pct = samples.chunks(len as usize).next().expect(&e);
 
     let total: u64 = pct.iter().map(|v| *v as u64).sum();
@@ -448,13 +456,17 @@ fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
     total as f64 / pct.len() as f64
 }
 
-fn get_percentile<V: Copy>(samples: &[V], pct: f64) -> V {
+fn get_percentile<V: Copy + Default>(samples: &[V], pct: f64) -> V {
+    if samples.is_empty() {
+        return V::default()
+    }
+
     let mut len = samples.len() as f64 * pct;
     if len < 1.0 {
         len = 1.0;
     }
 
-    let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
+    let e = format!("failed to calculate P{}", pct * 100.0);
     let pct = samples.chunks(len as usize).next().expect(&e);
 
     *pct.iter().last().unwrap()
