@@ -441,5 +441,5 @@ fn get_percentile<V: Copy>(samples: &[V], pct: f64) -> V {
     let e = format!("failed to calculate P{} avg latency", (1.0 - pct) * 100f64);
     let pct = samples.chunks(len as usize).next().expect(&e);
 
-    *pct.iter().next().unwrap()
+    *pct.iter().last().unwrap()
 }
