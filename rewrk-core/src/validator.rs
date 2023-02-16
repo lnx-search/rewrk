@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
+use http::HeaderMap;
 
 use http::response::Parts;
 use hyper::body::Bytes;
@@ -9,7 +10,7 @@ use hyper::body::Bytes;
 pub enum ValidationError {
     #[error("The returned status code is not valid: {0}")]
     /// The returned status code is not valid
-    InvalidStatus(u16),
+    InvalidStatus(u16, HeaderMap),
     #[error("The body of the request does not match the expected structure: {0}")]
     /// The body of the request does not match the expected structure
     InvalidBody(Cow<'static, str>),
@@ -72,7 +73,7 @@ impl ResponseValidator for DefaultValidator {
         if head.status.is_success() {
             Ok(())
         } else {
-            Err(ValidationError::InvalidStatus(head.status.as_u16()))
+            Err(ValidationError::InvalidStatus(head.status.as_u16(), head.headers))
         }
     }
 }
