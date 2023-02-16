@@ -60,9 +60,9 @@ impl SampleFactory {
             total_latency_duration: Default::default(),
             total_requests: 0,
             total_successful_requests: 0,
-            latency_hist: Histogram::new_with_max(60000, 6).unwrap(),
-            write_transfer_hist: Histogram::new_with_max(5 << 30, 7).unwrap(),
-            read_transfer_hist: Histogram::new_with_max(5 << 30, 7).unwrap(),
+            latency_hist: Histogram::new_with_max(60000, 5).unwrap(),
+            write_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
+            read_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
             errors: Vec::with_capacity(4),
             metadata: self.metadata,
         }
@@ -257,4 +257,13 @@ impl AddAssign for Sample {
 #[inline]
 fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u64 {
     ((stop - start) as f64 / dur.as_secs_f64()).round() as u64
+}
+
+
+#[cfg(test)]
+#[test]
+fn test_sig_figs() {
+    Histogram::<u32>::new_with_max(60000, 5).unwrap();
+    Histogram::<u32>::new_with_max(5 << 30, 5).unwrap();
+    Histogram::<u32>::new_with_max(5 << 30, 5).unwrap();
 }
