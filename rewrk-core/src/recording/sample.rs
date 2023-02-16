@@ -244,8 +244,9 @@ impl Add for Sample {
 impl AddAssign for Sample {
     fn add_assign(&mut self, rhs: Self) {
         self.total_duration += rhs.total_duration;
-        self.total_latency_duration += rhs.total_latency_duration;
+        self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
+        self.total_latency_duration += rhs.total_latency_duration;
         self.latency_hist += rhs.latency_hist;
         self.write_transfer_hist += rhs.write_transfer_hist;
         self.read_transfer_hist += rhs.read_transfer_hist;
