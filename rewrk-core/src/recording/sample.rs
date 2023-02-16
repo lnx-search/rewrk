@@ -60,9 +60,9 @@ impl SampleFactory {
             total_latency_duration: Default::default(),
             total_requests: 0,
             total_successful_requests: 0,
-            latency_hist: Histogram::new_with_max(6e+7 as u64, 8).unwrap(),
-            write_transfer_hist: Histogram::new_with_max(5 << 30, 8).unwrap(),
-            read_transfer_hist: Histogram::new_with_max(5 << 30, 8).unwrap(),
+            latency_hist: Histogram::new_with_max(6e+7 as u64, 7).unwrap(),
+            write_transfer_hist: Histogram::new_with_max(5 << 30, 7).unwrap(),
+            read_transfer_hist: Histogram::new_with_max(5 << 30, 7).unwrap(),
             errors: Vec::with_capacity(4),
             metadata: self.metadata,
         }
