@@ -201,7 +201,7 @@ impl Sample {
     /// This value is converted to micro seconds.
     pub(crate) fn record_latency(&mut self, dur: Duration) {
         self.total_latency_duration += dur;
-        let micros = dur.as_micros() as u64;
+        let micros = dur.as_millis() as u64;
         self.latency_hist.record(micros).expect("Record value");
     }
 
