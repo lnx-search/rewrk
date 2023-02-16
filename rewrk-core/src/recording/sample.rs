@@ -118,11 +118,11 @@ impl Debug for Sample {
 }
 
 impl Sample {
-    /// Sorts the sample values from largest to smallest.
+    /// Sorts the sample values from smallest to largest.
     pub(crate) fn sort_values(&mut self) {
-        self.latency.sort_by_key(|v| Reverse(*v));
-        self.write_transfer.sort_by_key(|v| Reverse(*v));
-        self.read_transfer.sort_by_key(|v| Reverse(*v));
+        self.latency.sort();
+        self.write_transfer.sort();
+        self.read_transfer.sort();
     }
 
     /// The total number of requests within the sample including any errors.
@@ -216,32 +216,38 @@ impl Sample {
 
     /// Gets the max value within the set.
     pub fn latency_max(&self) -> Duration {
-        self.latency().first().copied().unwrap_or_default()
+        // We assume our values are ordered smallest -> largest
+        self.latency().last().copied().unwrap_or_default()
     }
 
     /// Gets the max value within the set.
     pub fn write_transfer_max(&self) -> u32 {
-        self.write_transfer().first().copied().unwrap_or_default()
+        // We assume our values are ordered smallest -> largest
+        self.write_transfer().last().copied().unwrap_or_default()
     }
 
     /// Gets the max value within the set.
     pub fn read_transfer_max(&self) -> u32 {
-        self.read_transfer().first().copied().unwrap_or_default()
+        // We assume our values are ordered smallest -> largest
+        self.read_transfer().last().copied().unwrap_or_default()
     }
 
     /// Gets the min value within the set.
     pub fn latency_min(&self) -> Duration {
-        self.latency().last().copied().unwrap_or_default()
+        // We assume our values are ordered smallest -> largest
+        self.latency().first().copied().unwrap_or_default()
     }
 
     /// Gets the min value within the set.
     pub fn write_transfer_min(&self) -> u32 {
-        self.write_transfer().last().copied().unwrap_or_default()
+        // We assume our values are ordered smallest -> largest
+        self.write_transfer().first().copied().unwrap_or_default()
     }
 
     /// Gets the min value within the set.
+        // We assume our values are ordered smallest -> largest
     pub fn read_transfer_min(&self) -> u32 {
-        self.read_transfer().last().copied().unwrap_or_default()
+        self.read_transfer().first().copied().unwrap_or_default()
     }
 
     /// Gets the min value within the set.
