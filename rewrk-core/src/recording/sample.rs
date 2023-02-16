@@ -60,7 +60,7 @@ impl SampleFactory {
             total_latency_duration: Default::default(),
             total_requests: 0,
             total_successful_requests: 0,
-            latency_hist: Histogram::new_with_max(60000, 5).unwrap(),
+            latency_hist: Histogram::new_with_max(6e+7 as u64, 5).unwrap(),
             write_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
             read_transfer_hist: Histogram::new_with_max(5 << 30, 5).unwrap(),
             errors: Vec::with_capacity(4),
@@ -201,7 +201,7 @@ impl Sample {
     /// This value is converted to micro seconds.
     pub(crate) fn record_latency(&mut self, dur: Duration) {
         self.total_latency_duration += dur;
-        let micros = dur.as_millis() as u64;
+        let micros = dur.as_micros() as u64;
         self.latency_hist.record(micros).expect("Record value");
     }
 
