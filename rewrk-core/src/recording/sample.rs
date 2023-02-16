@@ -169,19 +169,23 @@ impl Sample {
 
     /// Calculates the mean average from a given percentile set of values.
     pub fn latency_mean(&self) -> Duration {
+        if self.latency().is_empty() {
+            return Duration::default()
+        }
+
         self.latency().iter().sum::<Duration>() / self.latency().len() as u32
     }
 
     /// Calculates the mean average from a given percentile set of values.
     pub fn write_transfer_mean(&self) -> f64 {
         self.write_transfer().iter().map(|v| *v as f64).sum::<f64>()
-            / self.latency().len() as f64
+            / self.write_transfer().len() as f64
     }
 
     /// Calculates the mean average from a given percentile set of values.
     pub fn read_transfer_mean(&self) -> f64 {
         self.read_transfer().iter().map(|v| *v as f64).sum::<f64>()
-            / self.latency().len() as f64
+            / self.read_transfer().len() as f64
     }
 
     /// Calculates the mean average from a given percentile set of values.
@@ -252,6 +256,10 @@ impl Sample {
 
     /// Gets the min value within the set.
     pub fn latency_stdev(&self) -> Duration {
+        if self.latency().is_empty() {
+            return Duration::default()
+        }
+
         let mean = self.latency_mean().as_secs_f64();
         let sum_delta: f64 = self
             .latency()
@@ -270,7 +278,11 @@ impl Sample {
 
     /// Gets the min value within the set.
     pub fn write_transfer_stdev(&self) -> f64 {
-        let mean = self.read_transfer_mean();
+        if self.write_transfer().is_empty() {
+            return 0.0
+        }
+
+        let mean = self.write_transfer_mean();
         let sum_delta: f64 = self
             .write_transfer()
             .iter()
@@ -288,6 +300,10 @@ impl Sample {
 
     /// Gets the min value within the set.
     pub fn read_transfer_stdev(&self) -> f64 {
+        if self.read_transfer().is_empty() {
+            return 0.0
+        }
+
         let mean = self.read_transfer_mean();
         let sum_delta: f64 = self
             .read_transfer()
