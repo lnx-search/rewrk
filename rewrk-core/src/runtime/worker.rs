@@ -419,7 +419,10 @@ impl WorkerConnection {
         let read_transfer_end = self.conn.usage().get_received_count();
         let write_transfer_end = self.conn.usage().get_written_count();
 
-        if let Err(e) = self.validator.validate(head, body) {
+        if let Err(e) = self.validator.validate(head, body.clone()) {
+            #[cfg(feature = "log-body-errors")]
+            debug!(body = ?body, "Failed to validate request body.");
+
             self.sample.record_error(e);
         } else {
             self.sample.record_successful_request();
