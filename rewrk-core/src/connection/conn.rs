@@ -176,8 +176,6 @@ impl ReWrkConnection {
             .headers_mut()
             .insert(header::HOST, self.host_header.clone());
 
-        trace!(uri = ?request.uri(), "Executing request");
-
         let resp = self.stream.send(request).await?;
         let (head, body) = resp.into_parts();
         let body = hyper::body::to_bytes(body).await?;
