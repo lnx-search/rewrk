@@ -175,6 +175,7 @@ impl ReWrkConnection {
         request
             .headers_mut()
             .insert(header::HOST, self.host_header.clone());
+        dbg!(&request);
 
         let resp = self.stream.send(request).await?;
         let (head, body) = resp.into_parts();
