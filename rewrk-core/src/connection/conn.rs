@@ -165,9 +165,7 @@ impl ReWrkConnection {
         mut request: Request<Body>,
     ) -> Result<(Parts, Bytes), hyper::Error> {
         let request_uri = request.uri();
-        let mut builder = Uri::builder()
-            .scheme(self.uri.scheme().unwrap().clone())
-            .authority(self.uri.authority().unwrap().clone());
+        let mut builder = Uri::builder();
         if let Some(path) = request_uri.path_and_query() {
             builder = builder.path_and_query(path.clone());
         }
@@ -175,7 +173,6 @@ impl ReWrkConnection {
         request
             .headers_mut()
             .insert(header::HOST, self.host_header.clone());
-        dbg!(&request);
 
         let resp = self.stream.send(request).await?;
         let (head, body) = resp.into_parts();
