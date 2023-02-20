@@ -164,8 +164,6 @@ impl ReWrkConnection {
         &mut self,
         mut request: Request<Body>,
     ) -> Result<(Parts, Bytes), hyper::Error> {
-        trace!(uri = ?request.uri(), "Executing request");
-
         let request_uri = request.uri();
         let mut builder = Uri::builder()
             .scheme(self.uri.scheme().unwrap().clone())
@@ -177,6 +175,8 @@ impl ReWrkConnection {
         request
             .headers_mut()
             .insert(header::HOST, self.host_header.clone());
+
+        trace!(uri = ?request.uri(), "Executing request");
 
         let resp = self.stream.send(request).await?;
         let (head, body) = resp.into_parts();
