@@ -164,6 +164,8 @@ impl ReWrkConnection {
         &mut self,
         mut request: Request<Body>,
     ) -> Result<(Parts, Bytes), hyper::Error> {
+        trace!(uri = ?request.uri(), "Executing request");
+
         let request_uri = request.uri();
         let mut builder = Uri::builder()
             .scheme(self.uri.scheme().unwrap().clone())
