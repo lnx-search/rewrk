@@ -231,7 +231,7 @@ fn create_connector(uri: Uri, protocol: HttpProtocol) -> Result<ReWrkConnector, 
     let host_header = HeaderValue::from_str(host).map_err(|_| Error::MissingHost)?;
     let host = host.to_string();
 
-    let connector = ReWrkConnector::new(uri, host_header, addr, protocol, scheme, host);
+    let connector = ReWrkConnector::new(host_header, addr, protocol, scheme, host);
 
     Ok(connector)
 }

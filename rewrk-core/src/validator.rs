@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
-use http::HeaderMap;
 
 use http::response::Parts;
+use http::HeaderMap;
 use hyper::body::Bytes;
 
 #[derive(Debug, thiserror::Error, Clone)]
@@ -73,7 +73,10 @@ impl ResponseValidator for DefaultValidator {
         if head.status.is_success() {
             Ok(())
         } else {
-            Err(ValidationError::InvalidStatus(head.status.as_u16(), head.headers))
+            Err(ValidationError::InvalidStatus(
+                head.status.as_u16(),
+                head.headers,
+            ))
         }
     }
 }

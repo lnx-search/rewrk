@@ -45,12 +45,28 @@ where
     pub producer_wait_warning_threshold: f32,
 }
 
+impl<P> WorkerConfig<P>
+where
+    P: Producer + Clone,
+{
+    fn clone_for_worker(&mut self, worker_id: usize) -> Self {
+        Self {
+            connector: self.connector.clone(),
+            validator: self.validator.clone(),
+            collector: self.collector.clone(),
+            producer: self.producer.for_worker(worker_id),
+            sample_window: self.sample_window,
+            producer_wait_warning_threshold: self.producer_wait_warning_threshold,
+        }
+    }
+}
+
 /// Spawns N worker runtimes for executing search requests.
 pub(crate) fn spawn_workers<P>(
     shutdown: ShutdownHandle,
     num_workers: usize,
     concurrency: usize,
-    config: WorkerConfig<P>,
+    mut config: WorkerConfig<P>,
 ) -> WorkerGuard
 where
     P: Producer + Clone,
@@ -75,7 +91,7 @@ where
             concurrency,
             guard.clone(),
             shutdown.clone(),
-            config.clone(),
+            config.clone_for_worker(worker_id),
         );
     }
 

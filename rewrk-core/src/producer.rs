@@ -78,6 +78,9 @@ pub struct Batch {
 /// }
 /// ```
 pub trait Producer: Send + 'static {
+    /// Create a new producer instance for a given worker.
+    fn for_worker(&mut self, worker_id: usize) -> Self;
+
     /// Signals to the producer that the system is ready and about to
     /// start benchmarking.
     fn ready(&mut self);

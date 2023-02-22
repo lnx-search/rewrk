@@ -21,7 +21,6 @@ const RETRY_MAX_DEFAULT: usize = 3;
 #[derive(Clone)]
 /// The initial HTTP connector for benchmarking.
 pub struct ReWrkConnector {
-    uri: Uri,
     host_header: HeaderValue,
     addr: SocketAddr,
     protocol: HttpProtocol,
@@ -33,7 +32,6 @@ pub struct ReWrkConnector {
 impl ReWrkConnector {
     /// Create a new connector.
     pub fn new(
-        uri: Uri,
         host_header: HeaderValue,
         addr: SocketAddr,
         protocol: HttpProtocol,
@@ -41,7 +39,6 @@ impl ReWrkConnector {
         host: impl Into<String>,
     ) -> Self {
         Self {
-            uri,
             host_header,
             addr,
             protocol,
@@ -118,7 +115,6 @@ impl ReWrkConnector {
         };
 
         Ok(ReWrkConnection::new(
-            self.uri.clone(),
             self.host_header.clone(),
             stream,
             usage_tracker,
@@ -128,7 +124,6 @@ impl ReWrkConnector {
 
 /// An established HTTP connection for benchmarking.
 pub struct ReWrkConnection {
-    uri: Uri,
     host_header: HeaderValue,
     stream: HttpStream,
     io_tracker: IoUsageTracker,
@@ -138,13 +133,11 @@ impl ReWrkConnection {
     #[inline]
     /// Creates a new live connection from an existing stream
     fn new(
-        uri: Uri,
         host_header: HeaderValue,
         stream: HttpStream,
         io_tracker: IoUsageTracker,
     ) -> Self {
         Self {
-            uri,
             host_header,
             stream,
             io_tracker,

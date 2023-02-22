@@ -1,4 +1,3 @@
-use std::cmp::Reverse;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, AddAssign};
 use std::time::{Duration, Instant};
@@ -170,7 +169,7 @@ impl Sample {
     /// Calculates the mean average from a given percentile set of values.
     pub fn latency_mean(&self) -> Duration {
         if self.latency().is_empty() {
-            return Duration::default()
+            return Duration::default();
         }
 
         self.latency().iter().sum::<Duration>() / self.latency().len() as u32
@@ -249,7 +248,7 @@ impl Sample {
     }
 
     /// Gets the min value within the set.
-        // We assume our values are ordered smallest -> largest
+    // We assume our values are ordered smallest -> largest
     pub fn read_transfer_min(&self) -> u32 {
         self.read_transfer().first().copied().unwrap_or_default()
     }
@@ -257,7 +256,7 @@ impl Sample {
     /// Gets the min value within the set.
     pub fn latency_stdev(&self) -> Duration {
         if self.latency().is_empty() {
-            return Duration::default()
+            return Duration::default();
         }
 
         let mean = self.latency_mean().as_secs_f64();
@@ -279,7 +278,7 @@ impl Sample {
     /// Gets the min value within the set.
     pub fn write_transfer_stdev(&self) -> f64 {
         if self.write_transfer().is_empty() {
-            return 0.0
+            return 0.0;
         }
 
         let mean = self.write_transfer_mean();
@@ -301,7 +300,7 @@ impl Sample {
     /// Gets the min value within the set.
     pub fn read_transfer_stdev(&self) -> f64 {
         if self.read_transfer().is_empty() {
-            return 0.0
+            return 0.0;
         }
 
         let mean = self.read_transfer_mean();
@@ -419,7 +418,7 @@ fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u32 {
 /// Calculates the mean latency from a percentile of the response times.
 fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
     if samples.is_empty() {
-        return Duration::default()
+        return Duration::default();
     }
 
     let mut len = samples.len() as f64 * pct;
@@ -440,7 +439,7 @@ fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
 /// Calculates the mean latency from a percentile of the response times.
 fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
     if samples.is_empty() {
-        return 0.0
+        return 0.0;
     }
 
     let mut len = samples.len() as f64 * pct;
@@ -458,7 +457,7 @@ fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
 
 fn get_percentile<V: Copy + Default>(samples: &[V], pct: f64) -> V {
     if samples.is_empty() {
-        return V::default()
+        return V::default();
     }
 
     let mut len = samples.len() as f64 * pct;
