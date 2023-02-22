@@ -4,6 +4,8 @@ use http::Request;
 use hyper::Body;
 use tokio::sync::oneshot;
 
+use crate::RequestKey;
+
 /// A batch of requests or single to the workers.
 pub enum RequestBatch {
     /// All requests have been produced and no more will be returned
@@ -54,11 +56,17 @@ pub struct Batch {
 ///
 /// #[rewrk_core::async_trait]
 /// impl Producer for BasicProducer {
+///     fn for_worker(&mut self, worker_id: usize) -> Self {
+///         Self {
+///             count: 0,
+///         }
+///     }
+///
 ///     fn ready(&mut self) {
 ///         self.count = 10;
 ///     }
 ///
-///     async fn create_batch(&mut self) -> anyhow::Result<RequestBatch> {
+///     async fn create_batch(&mut self) -> anyhow::Result<RequestBatch> {///
 ///         if self.count > 0 {
 ///             self.count -= 1;
 ///
@@ -93,7 +101,7 @@ pub trait Producer: Send + 'static {
     async fn create_batch(&mut self) -> anyhow::Result<RequestBatch>;
 }
 
-pub type ProducerBatches = Receiver<Batch>;
+pub type ProducerBatches = Receiver<(RequestKey, Batch)>;
 
 /// A sample collector which waits for and calls the
 /// specific collector handler.
@@ -115,6 +123,7 @@ impl ProducerActor {
             let _ = ready.await;
             producer.ready();
 
+            let mut request_id = 0;
             loop {
                 let batch = match producer.create_batch().await {
                     Ok(RequestBatch::End) => break,
@@ -129,14 +138,19 @@ impl ProducerActor {
                     },
                 };
 
+                let num_requests = batch.requests.len();
+                let request_key = RequestKey::new(worker_id, request_id);
+
                 debug!(
                     worker_id = worker_id,
                     batch_tag = batch.tag,
                     "Submitting request batch."
                 );
-                if tx.send_async(batch).await.is_err() {
+                if tx.send_async((request_key, batch)).await.is_err() {
                     break;
                 }
+
+                request_id += num_requests;
             }
 
             info!(worker_id = worker_id, "Producer actor has shutdown.");

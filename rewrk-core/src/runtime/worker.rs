@@ -15,7 +15,7 @@ use crate::producer::{Batch, Producer, ProducerActor, ProducerBatches};
 use crate::recording::{CollectorMailbox, SampleFactory, SampleMetadata};
 use crate::utils::RuntimeTimings;
 use crate::validator::ValidationError;
-use crate::{ResponseValidator, Sample};
+use crate::{RequestKey, ResponseValidator, Sample};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 type ConnectionTask = JoinHandle<RuntimeTimings>;
@@ -349,7 +349,7 @@ impl WorkerConnection {
     /// The method returns if more batches are possibly available.
     async fn execute_next_batch(&mut self) -> bool {
         let producer_start = Instant::now();
-        let batch = match self.producer.recv_async().await {
+        let (request_key, batch) = match self.producer.recv_async().await {
             Ok(batch) => batch,
             // We've completed all batches.
             Err(_) => return false,
@@ -364,14 +364,14 @@ impl WorkerConnection {
         }
 
         let execute_start = Instant::now();
-        self.execute_batch(batch).await;
+        self.execute_batch(request_key, batch).await;
         self.timings.execute_wait_runtime += execute_start.elapsed();
 
         true
     }
 
     /// Executes a batch of requests to measure the metrics.
-    async fn execute_batch(&mut self, batch: Batch) {
+    async fn execute_batch(&mut self, request_key: RequestKey, batch: Batch) {
         if self.sample.tag() != batch.tag {
             let success = self.submit_sample(batch.tag);
 
@@ -381,8 +381,10 @@ impl WorkerConnection {
             }
         }
 
-        for request in batch.requests {
-            let result = self.send(request).await;
+        for (n, request) in batch.requests.into_iter().enumerate() {
+            let key =
+                RequestKey::new(request_key.worker_id(), request_key.request_id() + n);
+            let result = self.send(key, request).await;
 
             match result {
                 Ok(should_continue) if !should_continue => {
@@ -400,7 +402,11 @@ impl WorkerConnection {
     }
 
     /// Send a HTTP request and record the relevant metrics
-    async fn send(&mut self, request: Request<Body>) -> Result<bool, hyper::Error> {
+    async fn send(
+        &mut self,
+        key: RequestKey,
+        request: Request<Body>,
+    ) -> Result<bool, hyper::Error> {
         self.sample.record_total_request();
 
         let read_transfer_start = self.conn.usage().get_received_count();
@@ -435,7 +441,7 @@ impl WorkerConnection {
         let read_transfer_end = self.conn.usage().get_received_count();
         let write_transfer_end = self.conn.usage().get_written_count();
 
-        if let Err(e) = self.validator.validate(head, body.clone()) {
+        if let Err(e) = self.validator.validate(key, head, body.clone()) {
             #[cfg(feature = "log-body-errors")]
             debug!(body = ?body, "Failed to validate request body.");
 

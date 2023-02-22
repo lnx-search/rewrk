@@ -5,6 +5,8 @@ use http::response::Parts;
 use http::HeaderMap;
 use hyper::body::Bytes;
 
+use crate::RequestKey;
+
 #[derive(Debug, thiserror::Error, Clone)]
 /// The provided request is invalid and should not be counted.
 pub enum ValidationError {
@@ -45,13 +47,13 @@ pub enum ValidationError {
 /// ```
 /// use http::response::Parts;
 /// use hyper::body::Bytes;
-/// use rewrk_core::{ResponseValidator, ValidationError};
+/// use rewrk_core::{RequestKey, ResponseValidator, ValidationError};
 ///
 /// #[derive(Debug)]
 /// pub struct DefaultValidator;
 ///
 /// impl ResponseValidator for DefaultValidator {
-///     fn validate(&self, head: Parts, _body: Bytes) -> Result<(), ValidationError> {
+///     fn validate(&self, request_key: RequestKey, head: Parts, _body: Bytes) -> Result<(), ValidationError> {
 ///         if head.status.is_success() {
 ///             Ok(())
 ///         } else {
@@ -61,7 +63,12 @@ pub enum ValidationError {
 /// }
 /// ```
 pub trait ResponseValidator: Send + Sync + 'static {
-    fn validate(&self, head: Parts, body: Bytes) -> Result<(), ValidationError>;
+    fn validate(
+        &self,
+        request_key: RequestKey,
+        head: Parts,
+        body: Bytes,
+    ) -> Result<(), ValidationError>;
 }
 
 #[derive(Debug)]
@@ -69,7 +76,12 @@ pub trait ResponseValidator: Send + Sync + 'static {
 pub struct DefaultValidator;
 
 impl ResponseValidator for DefaultValidator {
-    fn validate(&self, head: Parts, _body: Bytes) -> Result<(), ValidationError> {
+    fn validate(
+        &self,
+        _request_key: RequestKey,
+        head: Parts,
+        _body: Bytes,
+    ) -> Result<(), ValidationError> {
         if head.status.is_success() {
             Ok(())
         } else {

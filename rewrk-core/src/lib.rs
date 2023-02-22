@@ -123,6 +123,8 @@ mod runtime;
 mod utils;
 mod validator;
 
+use std::fmt::{Debug, Formatter};
+
 pub use async_trait::async_trait;
 pub use http;
 
@@ -136,3 +138,34 @@ pub use self::runtime::{
     DEFAULT_WINDOW_DURATION,
 };
 pub use self::validator::{DefaultValidator, ResponseValidator, ValidationError};
+
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+/// A unique ID for each request which is executed.
+///
+/// This is provided to allow the user to deterministically work out what
+/// request produced by a producer is what when validating.
+///
+/// The system is deterministic, on a per-worker basis.
+pub struct RequestKey(usize, usize);
+
+impl Debug for RequestKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RequestKey(worker_id={}, request_id={})", self.0, self.1)
+    }
+}
+
+impl RequestKey {
+    pub fn new(worker_id: usize, request_id: usize) -> Self {
+        Self(worker_id, request_id)
+    }
+
+    #[inline]
+    pub fn worker_id(&self) -> usize {
+        self.0
+    }
+
+    #[inline]
+    pub fn request_id(&self) -> usize {
+        self.1
+    }
+}
