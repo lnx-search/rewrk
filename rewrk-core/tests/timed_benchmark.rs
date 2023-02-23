@@ -2,13 +2,14 @@ use std::time::{Duration, Instant};
 
 use axum::routing::get;
 use axum::Router;
-use http::{Method, Request, Uri};
+use http::{Method, Uri};
 use hyper::Body;
 use rewrk_core::{
     Batch,
     HttpProtocol,
     Producer,
     ReWrkBenchmark,
+    Request,
     RequestBatch,
     Sample,
     SampleCollector,
@@ -50,9 +51,9 @@ async fn test_basic_benchmark() {
     assert_eq!(sample.tag(), 0);
     dbg!(
         sample.latency().len(),
-        sample.latency().min(),
-        sample.latency().max(),
-        sample.latency().stdev(),
+        sample.latency_min(),
+        sample.latency_max(),
+        sample.latency_stdev(),
     );
 }
 
@@ -81,6 +82,10 @@ impl Default for TimedProducer {
 
 #[rewrk_core::async_trait]
 impl Producer for TimedProducer {
+    fn for_worker(&mut self, _worker_id: usize) -> Self {
+        self.clone()
+    }
+
     fn ready(&mut self) {
         self.start = Instant::now();
     }
@@ -93,10 +98,11 @@ impl Producer for TimedProducer {
         let uri = Uri::builder().path_and_query("/").build()?;
         let requests = (0..500)
             .map(|_| {
-                Request::builder()
+                let req = http::Request::builder()
                     .method(Method::GET)
                     .uri(uri.clone())
-                    .body(Body::empty())
+                    .body(Body::empty())?;
+                Ok::<_, http::Error>(Request::new(0, req))
             })
             .collect::<Result<Vec<_>, _>>()?;
 

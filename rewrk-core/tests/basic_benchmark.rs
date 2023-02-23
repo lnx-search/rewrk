@@ -1,12 +1,13 @@
 use axum::routing::get;
 use axum::Router;
-use http::{Method, Request, Uri};
+use http::{Method, Uri};
 use hyper::Body;
 use rewrk_core::{
     Batch,
     HttpProtocol,
     Producer,
     ReWrkBenchmark,
+    Request,
     RequestBatch,
     Sample,
     SampleCollector,
@@ -64,6 +65,10 @@ pub struct BasicProducer {
 
 #[rewrk_core::async_trait]
 impl Producer for BasicProducer {
+    fn for_worker(&mut self, _worker_id: usize) -> Self {
+        self.clone()
+    }
+
     fn ready(&mut self) {
         self.count = 1;
     }
@@ -73,13 +78,13 @@ impl Producer for BasicProducer {
             self.count -= 1;
 
             let uri = Uri::builder().path_and_query("/").build()?;
-            let request = Request::builder()
+            let request = http::Request::builder()
                 .method(Method::GET)
                 .uri(uri)
                 .body(Body::empty())?;
             Ok(RequestBatch::Batch(Batch {
                 tag: 0,
-                requests: vec![request],
+                requests: vec![Request::new(0, request)],
             }))
         } else {
             Ok(RequestBatch::End)

@@ -45,6 +45,11 @@ impl SampleFactory {
     }
 
     #[inline]
+    pub fn worker_id(&self) -> usize {
+        self.metadata.worker_id
+    }
+
+    #[inline]
     /// Check if the handler should submit the current sample.
     pub fn should_submit(&self, instant: Instant) -> bool {
         self.window_timeout <= instant.elapsed()

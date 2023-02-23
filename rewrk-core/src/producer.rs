@@ -1,10 +1,7 @@
 use async_trait::async_trait;
 use flume::Receiver;
-use http::Request;
 use hyper::Body;
 use tokio::sync::oneshot;
-
-use crate::RequestKey;
 
 /// A batch of requests or single to the workers.
 pub enum RequestBatch {
@@ -14,6 +11,19 @@ pub enum RequestBatch {
     End,
     /// A new batch to process.
     Batch(Batch),
+}
+
+/// The given request payload for executing.
+pub struct Request {
+    pub(crate) id: usize,
+    pub(crate) inner: http::Request<Body>,
+}
+
+impl Request {
+    /// Create a new request.
+    pub fn new(id: usize, inner: http::Request<Body>) -> Self {
+        Self { id, inner }
+    }
 }
 
 pub struct Batch {
@@ -27,7 +37,7 @@ pub struct Batch {
     /// a new sample will be created.
     pub tag: usize,
     /// The batch requests.
-    pub requests: Vec<Request<Body>>,
+    pub requests: Vec<Request>,
 }
 
 #[async_trait]
@@ -45,9 +55,9 @@ pub struct Batch {
 /// of requests for the benchmarker to execute before completing the
 /// benchmark.
 /// ```
-/// use http::{Method, Request, Uri};
+/// use http::{Method, Uri};
 /// use hyper::Body;
-/// use rewrk_core::{Batch, Producer, RequestBatch};
+/// use rewrk_core::{Batch, Producer, RequestBatch, Request};
 ///
 /// #[derive(Default, Clone)]
 /// pub struct BasicProducer {
@@ -71,13 +81,13 @@ pub struct Batch {
 ///             self.count -= 1;
 ///
 ///             let uri = Uri::builder().path_and_query("/").build()?;
-///             let request = Request::builder()
+///             let request = http::Request::builder()
 ///                 .method(Method::GET)
 ///                 .uri(uri)
 ///                 .body(Body::empty())?;
 ///             Ok(RequestBatch::Batch(Batch {
 ///                 tag: 0,
-///                 requests: vec![request],
+///                 requests: vec![Request::new(0, request)],
 ///             }))
 ///         } else {
 ///             Ok(RequestBatch::End)
@@ -101,7 +111,7 @@ pub trait Producer: Send + 'static {
     async fn create_batch(&mut self) -> anyhow::Result<RequestBatch>;
 }
 
-pub type ProducerBatches = Receiver<(RequestKey, Batch)>;
+pub type ProducerBatches = Receiver<Batch>;
 
 /// A sample collector which waits for and calls the
 /// specific collector handler.
@@ -123,7 +133,6 @@ impl ProducerActor {
             let _ = ready.await;
             producer.ready();
 
-            let mut request_id = 0;
             loop {
                 let batch = match producer.create_batch().await {
                     Ok(RequestBatch::End) => break,
@@ -138,19 +147,14 @@ impl ProducerActor {
                     },
                 };
 
-                let num_requests = batch.requests.len();
-                let request_key = RequestKey::new(worker_id, request_id);
-
                 debug!(
                     worker_id = worker_id,
                     batch_tag = batch.tag,
                     "Submitting request batch."
                 );
-                if tx.send_async((request_key, batch)).await.is_err() {
+                if tx.send_async(batch).await.is_err() {
                     break;
                 }
-
-                request_id += num_requests;
             }
 
             info!(worker_id = worker_id, "Producer actor has shutdown.");

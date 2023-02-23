@@ -349,7 +349,7 @@ impl WorkerConnection {
     /// The method returns if more batches are possibly available.
     async fn execute_next_batch(&mut self) -> bool {
         let producer_start = Instant::now();
-        let (request_key, batch) = match self.producer.recv_async().await {
+        let batch = match self.producer.recv_async().await {
             Ok(batch) => batch,
             // We've completed all batches.
             Err(_) => return false,
@@ -364,14 +364,14 @@ impl WorkerConnection {
         }
 
         let execute_start = Instant::now();
-        self.execute_batch(request_key, batch).await;
+        self.execute_batch(batch).await;
         self.timings.execute_wait_runtime += execute_start.elapsed();
 
         true
     }
 
     /// Executes a batch of requests to measure the metrics.
-    async fn execute_batch(&mut self, request_key: RequestKey, batch: Batch) {
+    async fn execute_batch(&mut self, batch: Batch) {
         if self.sample.tag() != batch.tag {
             let success = self.submit_sample(batch.tag);
 
@@ -381,10 +381,9 @@ impl WorkerConnection {
             }
         }
 
-        for (n, request) in batch.requests.into_iter().enumerate() {
-            let key =
-                RequestKey::new(request_key.worker_id(), request_key.request_id() + n);
-            let result = self.send(key, request).await;
+        for request in batch.requests {
+            let key = RequestKey::new(self.sample_factory.worker_id(), request.id);
+            let result = self.send(key, request.inner).await;
 
             match result {
                 Ok(should_continue) if !should_continue => {

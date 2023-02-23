@@ -129,7 +129,7 @@ pub use async_trait::async_trait;
 pub use http;
 
 pub use self::connection::{HttpProtocol, Scheme};
-pub use self::producer::{Batch, Producer, ProducerBatches, RequestBatch};
+pub use self::producer::{Batch, Producer, ProducerBatches, Request, RequestBatch};
 pub use self::recording::{Sample, SampleCollector};
 pub use self::runtime::{
     Error,

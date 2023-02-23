@@ -53,7 +53,7 @@ pub enum ValidationError {
 /// pub struct DefaultValidator;
 ///
 /// impl ResponseValidator for DefaultValidator {
-///     fn validate(&self, request_key: RequestKey, head: Parts, _body: Bytes) -> Result<(), ValidationError> {
+///     fn validate(&self, request_id: RequestKey, head: Parts, _body: Bytes) -> Result<(), ValidationError> {
 ///         if head.status.is_success() {
 ///             Ok(())
 ///         } else {
