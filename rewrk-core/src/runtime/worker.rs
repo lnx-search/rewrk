@@ -143,12 +143,16 @@ async fn run_worker<P>(
     let producer =
         ProducerActor::spawn(concurrency * 4, worker_id, config.producer, ready_rx)
             .await;
-    let metadata = SampleMetadata { worker_id };
-    let sample_factory =
-        SampleFactory::new(config.sample_window, metadata, config.collector);
 
     let mut pending_futures = Vec::<ConnectionTask>::with_capacity(concurrency);
-    for _ in 0..concurrency {
+    for concurrency_id in 0..concurrency {
+        let metadata = SampleMetadata {
+            worker_id,
+            concurrency_id,
+        };
+        let sample_factory =
+            SampleFactory::new(config.sample_window, metadata, config.collector.clone());
+
         let task_opt = create_worker_connection(
             worker_id,
             &config.connector,

@@ -50,7 +50,7 @@ async fn test_basic_benchmark() {
 
 async fn run_server() {
     // build our application with a single route
-    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+    let app = Router::new().route("/hello", get(|| async { "Hello, World!" }));
 
     axum::Server::bind(&ADDR.parse().unwrap())
         .serve(app.into_make_service())
@@ -77,7 +77,7 @@ impl Producer for BasicProducer {
         if self.count > 0 {
             self.count -= 1;
 
-            let uri = Uri::builder().path_and_query("/").build()?;
+            let uri = Uri::builder().path_and_query("/hello").build()?;
             let request = http::Request::builder()
                 .method(Method::GET)
                 .uri(uri)

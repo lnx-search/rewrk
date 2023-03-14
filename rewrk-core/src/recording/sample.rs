@@ -11,6 +11,8 @@ use crate::validator::ValidationError;
 pub struct SampleMetadata {
     /// The unique ID of the worker thread.
     pub worker_id: usize,
+    /// The unique ID of the concurrent connection.
+    pub concurrency_id: usize,
 }
 
 #[derive(Debug, thiserror::Error)]

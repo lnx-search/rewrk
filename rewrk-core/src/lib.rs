@@ -90,7 +90,7 @@
 //!                 .body(Body::empty())?;
 //!             Ok(RequestBatch::Batch(Batch {
 //!                 tag: 0,
-//!                 requests: vec![request],
+//!                 requests: vec![rewrk_core::Request::new(0, request)],
 //!             }))
 //!         } else {
 //!             Ok(RequestBatch::End)
@@ -137,6 +137,7 @@ pub use self::runtime::{
     DEFAULT_WAIT_WARNING_THRESHOLD,
     DEFAULT_WINDOW_DURATION,
 };
+pub use self::utils::SampleMerger;
 pub use self::validator::{DefaultValidator, ResponseValidator, ValidationError};
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
