@@ -21,7 +21,11 @@ impl SampleMerger {
             sample.metadata().worker_id,
             sample.metadata().concurrency_id,
         );
-        self.entries.insert(key, sample);
+
+        self.entries
+            .entry(key)
+            .and_modify(|sample| (*sample) += sample.clone())
+            .or_insert(sample);
     }
 
     /// Iterate over the merged samples.

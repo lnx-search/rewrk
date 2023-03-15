@@ -75,6 +75,10 @@
 //!
 //! #[rewrk_core::async_trait]
 //! impl Producer for BasicProducer {
+//!     fn for_worker(&mut self, _worker_id: usize) -> Self {
+//!         self.clone()
+//!     }
+//!
 //!     fn ready(&mut self) {
 //!         self.count = 1;
 //!     }
