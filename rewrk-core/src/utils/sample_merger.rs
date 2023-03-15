@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::ops::Deref;
 
 use crate::Sample;
 
@@ -11,6 +12,14 @@ type SampleKey = (usize, usize, usize);
 /// taking into account concurrency and tags.
 pub struct SampleMerger {
     entries: BTreeMap<SampleKey, Sample>,
+}
+
+impl Deref for SampleMerger {
+    type Target = BTreeMap<SampleKey, Sample>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
 }
 
 impl SampleMerger {
