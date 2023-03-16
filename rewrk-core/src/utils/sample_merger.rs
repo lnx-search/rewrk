@@ -41,11 +41,15 @@ impl SampleMerger {
     pub fn iter_samples(&mut self) -> impl Iterator<Item = MergedSample> + '_ {
         self.entries
             .iter()
-            .map(|((tag, worker_id, concurrency_id), sample)| MergedSample {
-                tag: *tag,
-                worker_id: *worker_id,
-                concurrency_id: *concurrency_id,
-                sample: sample.clone(),
+            .map(|((tag, worker_id, concurrency_id), sample)| {
+                let mut sample: Sample = sample.clone();
+                sample.sort_values();
+                MergedSample {
+                    tag: *tag,
+                    worker_id: *worker_id,
+                    concurrency_id: *concurrency_id,
+                    sample,
+                }
             })
     }
 }
