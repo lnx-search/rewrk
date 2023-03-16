@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::mem::size_of;
 use std::ops::{Add, AddAssign};
 use std::time::{Duration, Instant};
 
@@ -124,6 +125,14 @@ impl Debug for Sample {
 }
 
 impl Sample {
+    /// The memory consumed by the sample
+    pub fn allocation_usage(&self) -> usize {
+        self.latency.len() * size_of::<Duration>()
+            + self.write_transfer.len() * size_of::<u32>()
+            + self.read_transfer.len() * size_of::<u32>()
+            + self.errors.len() * size_of::<ValidationError>()
+    }
+
     /// Sorts the sample values from smallest to largest.
     pub(crate) fn sort_values(&mut self) {
         self.latency.sort();
