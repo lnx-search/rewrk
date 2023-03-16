@@ -33,7 +33,7 @@ impl SampleMerger {
 
         self.entries
             .entry(key)
-            .and_modify(|sample| (*sample) += sample.clone())
+            .and_modify(|agg| (*agg) += sample.clone())
             .or_insert(sample);
     }
 
