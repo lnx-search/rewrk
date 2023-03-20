@@ -1,4 +1,5 @@
 use std::cmp;
+use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 use std::ops::{Add, AddAssign};
@@ -62,8 +63,11 @@ impl SampleFactory {
     #[inline]
     /// Create a new sample to record metrics.
     pub fn new_sample(&self, tag: usize) -> Sample {
+        let mut lanes = BTreeSet::new();
+        lanes.insert((self.metadata.worker_id, self.metadata.concurrency_id));
         Sample {
             tag,
+            concurrent_lanes: lanes,
             total_duration: Default::default(),
             total_latency_duration: Default::default(),
             total_requests: 0,
@@ -103,6 +107,7 @@ impl SampleFactory {
 /// varying percentile statistics of the benchmark.
 pub struct Sample {
     tag: usize,
+    concurrent_lanes: BTreeSet<(usize, usize)>,
     total_duration: Duration,
     total_latency_duration: Duration,
     total_requests: usize,
@@ -427,6 +432,7 @@ impl AddAssign for Sample {
             self.total_latency_duration = cmp::max(self.total_latency_duration, rhs.total_latency_duration);
         }
 
+        self.concurrent_lanes.insert((rhs.metadata.worker_id, rhs.metadata.concurrency_id));
         self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
         self.latency.extend(rhs.latency);
