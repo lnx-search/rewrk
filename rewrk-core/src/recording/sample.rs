@@ -1,3 +1,4 @@
+use std::cmp;
 use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 use std::ops::{Add, AddAssign};
@@ -415,10 +416,19 @@ impl Add for Sample {
 
 impl AddAssign for Sample {
     fn add_assign(&mut self, rhs: Self) {
-        self.total_duration += rhs.total_duration;
+        // If the sample is the same add the duration.
+        if (self.metadata.concurrency_id == rhs.metadata.concurrency_id)
+            && (self.metadata.worker_id == rhs.metadata.worker_id)
+        {
+            self.total_duration += rhs.total_duration;
+            self.total_latency_duration += rhs.total_latency_duration;
+        } else {
+            self.total_duration = cmp::max(self.total_duration, rhs.total_duration);
+            self.total_latency_duration = cmp::max(self.total_latency_duration, rhs.total_latency_duration);
+        }
+
         self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
-        self.total_latency_duration += rhs.total_latency_duration;
         self.latency.extend(rhs.latency);
         self.read_transfer.extend(rhs.read_transfer);
         self.write_transfer.extend(rhs.write_transfer);
