@@ -355,6 +355,15 @@ impl Sample {
     }
 
     #[inline]
+    /// The number of samples that were produced concurrently
+    /// which have been merged.
+    ///
+    /// This can be used to correct results.
+    pub fn num_recorded_concurrency(&self) -> usize {
+        self.concurrent_lanes.len()
+    }
+
+    #[inline]
     /// Record a request validation error.
     pub(crate) fn record_successful_request(&mut self) {
         self.total_successful_requests += 1;
