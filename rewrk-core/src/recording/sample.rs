@@ -16,6 +16,8 @@ pub struct SampleMetadata {
     pub worker_id: usize,
     /// The unique ID of the concurrent connection.
     pub concurrency_id: usize,
+    /// The total concurrency value.
+    pub total_concurrency: usize,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -429,10 +431,12 @@ impl AddAssign for Sample {
             self.total_latency_duration += rhs.total_latency_duration;
         } else {
             self.total_duration = cmp::max(self.total_duration, rhs.total_duration);
-            self.total_latency_duration = cmp::max(self.total_latency_duration, rhs.total_latency_duration);
+            self.total_latency_duration =
+                cmp::max(self.total_latency_duration, rhs.total_latency_duration);
         }
 
-        self.concurrent_lanes.insert((rhs.metadata.worker_id, rhs.metadata.concurrency_id));
+        self.concurrent_lanes
+            .insert((rhs.metadata.worker_id, rhs.metadata.concurrency_id));
         self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
         self.latency.extend(rhs.latency);

@@ -65,7 +65,7 @@ where
 pub(crate) fn spawn_workers<P>(
     shutdown: ShutdownHandle,
     num_workers: usize,
-    concurrency: usize,
+    total_concurrency: usize,
     mut config: WorkerConfig<P>,
 ) -> WorkerGuard
 where
@@ -74,8 +74,9 @@ where
     // We use a channel here as a guard in order to wait for all workers to shutdown.
     let (guard, waiter) = flume::bounded(1);
 
-    let per_worker_concurrency = concurrency / num_workers;
-    let mut remaining_concurrency = concurrency - (per_worker_concurrency * num_workers);
+    let per_worker_concurrency = total_concurrency / num_workers;
+    let mut remaining_concurrency =
+        total_concurrency - (per_worker_concurrency * num_workers);
 
     for worker_id in 0..num_workers {
         let concurrency_modifier = if remaining_concurrency != 0 {
@@ -89,6 +90,7 @@ where
         spawn_worker(
             worker_id,
             concurrency,
+            total_concurrency,
             guard.clone(),
             shutdown.clone(),
             config.clone_for_worker(worker_id),
@@ -102,6 +104,7 @@ where
 fn spawn_worker<P>(
     worker_id: usize,
     concurrency: usize,
+    total_concurrency: usize,
     guard: flume::Sender<()>,
     handle: ShutdownHandle,
     config: WorkerConfig<P>,
@@ -117,7 +120,13 @@ fn spawn_worker<P>(
         .name(format!("rewrk-worker-{worker_id}"))
         .spawn(move || {
             debug!(worker_id = worker_id, "Spawning worker");
-            rt.block_on(run_worker(worker_id, concurrency, handle, config));
+            rt.block_on(run_worker(
+                worker_id,
+                concurrency,
+                total_concurrency,
+                handle,
+                config,
+            ));
 
             // Drop the guard explicitly to make sure it's not dropped
             // until after the runtime has completed.
@@ -134,6 +143,7 @@ fn spawn_worker<P>(
 async fn run_worker<P>(
     worker_id: usize,
     concurrency: usize,
+    total_concurrency: usize,
     shutdown: ShutdownHandle,
     config: WorkerConfig<P>,
 ) where
@@ -149,6 +159,7 @@ async fn run_worker<P>(
         let metadata = SampleMetadata {
             worker_id,
             concurrency_id,
+            total_concurrency,
         };
         let sample_factory =
             SampleFactory::new(config.sample_window, metadata, config.collector.clone());
