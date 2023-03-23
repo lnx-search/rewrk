@@ -18,7 +18,7 @@ use crate::utils::IoUsageTracker;
 
 /// The maximum number of attempts to try connect before aborting.
 const RETRY_MAX_DEFAULT: usize = 3;
-const BACKOFF_MIN: Duration = Duration::from_millis(500);
+const BACKOFF_MIN: Duration = Duration::from_secs(1);
 const BACKOFF_MAX: Duration = Duration::from_secs(30);
 
 #[derive(Clone)]
@@ -192,6 +192,7 @@ impl ReWrkConnection {
                     )
                     .await?;
                 let (head, body) = resp.into_parts();
+                let body = hyper::body::to_bytes(body).await?;
 
                 if head.status == StatusCode::TOO_MANY_REQUESTS {
                     trace!(
@@ -204,7 +205,6 @@ impl ReWrkConnection {
                     continue;
                 }
 
-                let body = hyper::body::to_bytes(body).await?;
                 return Ok((head, body));
             }
         }
