@@ -398,26 +398,14 @@ impl Sample {
 
     #[inline]
     /// Record a write transfer rate.
-    pub(crate) fn record_write_transfer(
-        &mut self,
-        start_count: u64,
-        end_count: u64,
-        dur: Duration,
-    ) {
-        self.write_transfer
-            .push(calculate_rate(start_count, end_count, dur));
+    pub(crate) fn record_write_transfer(&mut self, delta: u64, dur: Duration) {
+        self.write_transfer.push(calculate_rate(delta, dur));
     }
 
     #[inline]
     /// Record a read transfer rate.
-    pub(crate) fn record_read_transfer(
-        &mut self,
-        start_count: u64,
-        end_count: u64,
-        dur: Duration,
-    ) {
-        self.read_transfer
-            .push(calculate_rate(start_count, end_count, dur));
+    pub(crate) fn record_read_transfer(&mut self, delta: u64, dur: Duration) {
+        self.read_transfer.push(calculate_rate(delta, dur));
     }
 }
 
@@ -456,8 +444,8 @@ impl AddAssign for Sample {
 }
 
 #[inline]
-fn calculate_rate(start: u64, stop: u64, dur: Duration) -> u32 {
-    ((stop - start) as f64 / dur.as_secs_f64()).round() as u32
+fn calculate_rate(delta: u64, dur: Duration) -> u32 {
+    (delta as f64 / dur.as_secs_f64()).round() as u32
 }
 
 /// Calculates the mean latency from a percentile of the response times.

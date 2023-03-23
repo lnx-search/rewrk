@@ -170,7 +170,7 @@ impl ReWrkConnection {
     pub(crate) async fn execute_req(
         &mut self,
         request: Request<Bytes>,
-    ) -> Result<(Parts, Bytes), hyper::Error> {
+    ) -> Result<ResponseValue, hyper::Error> {
         let (head, body) = request.into_parts();
         let request_uri = head.uri;
         let mut builder = Uri::builder();
@@ -183,6 +183,9 @@ impl ReWrkConnection {
             let mut attempt = 1;
             let backoff = Backoff::new(12, BACKOFF_MIN, BACKOFF_MAX);
             for duration in &backoff {
+                let read_transfer_start = self.usage().get_received_count();
+                let write_transfer_start = self.usage().get_written_count();
+
                 let resp = self
                     .send_request(
                         uri.clone(),
@@ -197,24 +200,41 @@ impl ReWrkConnection {
                 if head.status == StatusCode::TOO_MANY_REQUESTS {
                     warn!(
                         attempt = attempt,
-                        "Request rate limited, retrying in {:?}",
-                        duration
+                        "Request rate limited, retrying in {:?}", duration
                     );
                     tokio::time::sleep(duration).await;
                     attempt += 1;
                     continue;
                 }
 
-                return Ok((head, body));
+                let read_transfer_end = self.usage().get_received_count();
+                let write_transfer_end = self.usage().get_written_count();
+                return Ok(ResponseValue {
+                    head,
+                    body,
+                    written_bytes: write_transfer_end - write_transfer_start,
+                    read_bytes: read_transfer_end - read_transfer_start,
+                });
             }
         }
+
+        let read_transfer_start = self.usage().get_received_count();
+        let write_transfer_start = self.usage().get_written_count();
 
         let resp = self
             .send_request(uri, head.method, head.headers, body)
             .await?;
         let (head, body) = resp.into_parts();
         let body = hyper::body::to_bytes(body).await?;
-        Ok((head, body))
+
+        let read_transfer_end = self.usage().get_received_count();
+        let write_transfer_end = self.usage().get_written_count();
+        Ok(ResponseValue {
+            head,
+            body,
+            written_bytes: write_transfer_end - write_transfer_start,
+            read_bytes: read_transfer_end - read_transfer_start,
+        })
     }
 
     async fn send_request(
@@ -276,4 +296,11 @@ impl Drop for HttpStream {
     fn drop(&mut self) {
         self.waiter.abort();
     }
+}
+
+pub struct ResponseValue {
+    pub head: Parts,
+    pub body: Bytes,
+    pub written_bytes: u64,
+    pub read_bytes: u64,
 }

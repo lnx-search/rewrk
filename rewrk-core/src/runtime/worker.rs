@@ -423,11 +423,9 @@ impl WorkerConnection {
     ) -> Result<bool, hyper::Error> {
         self.sample.record_total_request();
 
-        let read_transfer_start = self.conn.usage().get_received_count();
-        let write_transfer_start = self.conn.usage().get_written_count();
         let start = Instant::now();
 
-        let (head, body) = match self.conn.execute_req(request).await {
+        let response = match self.conn.execute_req(request).await {
             Ok(resp) => resp,
             Err(e) => {
                 if e.is_body_write_aborted() || e.is_closed() || e.is_connect() {
@@ -452,10 +450,11 @@ impl WorkerConnection {
         };
 
         let elapsed_time = start.elapsed();
-        let read_transfer_end = self.conn.usage().get_received_count();
-        let write_transfer_end = self.conn.usage().get_written_count();
 
-        if let Err(e) = self.validator.validate(key, head, body.clone()) {
+        if let Err(e) =
+            self.validator
+                .validate(key, response.head, response.body.clone())
+        {
             #[cfg(feature = "log-body-errors")]
             debug!(body = ?body, "Failed to validate request body.");
 
@@ -463,16 +462,10 @@ impl WorkerConnection {
         } else {
             self.sample.record_successful_request();
             self.sample.record_latency(elapsed_time);
-            self.sample.record_read_transfer(
-                read_transfer_start,
-                read_transfer_end,
-                elapsed_time,
-            );
-            self.sample.record_write_transfer(
-                write_transfer_start,
-                write_transfer_end,
-                elapsed_time,
-            );
+            self.sample
+                .record_read_transfer(response.read_bytes, elapsed_time);
+            self.sample
+                .record_write_transfer(response.written_bytes, elapsed_time);
         }
 
         // Submit the sample if it's window interval has elapsed.
