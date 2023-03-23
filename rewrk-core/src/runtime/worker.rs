@@ -456,7 +456,7 @@ impl WorkerConnection {
                 .validate(key, response.head, response.body.clone())
         {
             #[cfg(feature = "log-body-errors")]
-            debug!(body = ?body, "Failed to validate request body.");
+            debug!(body = ?response.body, "Failed to validate request body.");
 
             self.sample.record_error(e);
         } else {
