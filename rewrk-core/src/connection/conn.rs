@@ -195,7 +195,7 @@ impl ReWrkConnection {
                 let body = hyper::body::to_bytes(body).await?;
 
                 if head.status == StatusCode::TOO_MANY_REQUESTS {
-                    trace!(
+                    warn!(
                         attempt = attempt,
                         "Request rate limited, retrying in {:?}",
                         duration
