@@ -131,6 +131,7 @@ use std::fmt::{Debug, Formatter};
 
 pub use async_trait::async_trait;
 pub use http;
+pub use hyper::body::Bytes;
 
 pub use self::connection::{HttpProtocol, Scheme};
 pub use self::producer::{Batch, Producer, ProducerBatches, Request, RequestBatch};

@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use futures_util::future::join_all;
 use http::Request;
-use hyper::Body;
+use hyper::body::Bytes;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 
@@ -419,7 +419,7 @@ impl WorkerConnection {
     async fn send(
         &mut self,
         key: RequestKey,
-        request: Request<Body>,
+        request: Request<Bytes>,
     ) -> Result<bool, hyper::Error> {
         self.sample.record_total_request();
 

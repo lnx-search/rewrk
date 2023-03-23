@@ -1,8 +1,9 @@
 use std::future::Future;
 use std::net::SocketAddr;
 
+use exponential_backoff::Backoff;
 use http::response::Parts;
-use http::{header, HeaderValue, Request, Response, Uri};
+use http::{header, HeaderMap, HeaderValue, Method, Request, Response, StatusCode, Uri};
 use hyper::body::Bytes;
 use hyper::client::conn;
 use hyper::client::conn::SendRequest;
@@ -17,6 +18,8 @@ use crate::utils::IoUsageTracker;
 
 /// The maximum number of attempts to try connect before aborting.
 const RETRY_MAX_DEFAULT: usize = 3;
+const BACKOFF_MIN: Duration = Duration::from_millis(500);
+const BACKOFF_MAX: Duration = Duration::from_secs(30);
 
 #[derive(Clone)]
 /// The initial HTTP connector for benchmarking.
@@ -27,6 +30,7 @@ pub struct ReWrkConnector {
     scheme: Scheme,
     host: String,
     retry_max: usize,
+    retry_429s: bool,
 }
 
 impl ReWrkConnector {
@@ -45,12 +49,18 @@ impl ReWrkConnector {
             scheme,
             host: host.into(),
             retry_max: RETRY_MAX_DEFAULT,
+            retry_429s: false,
         }
     }
 
     /// Set a new max retry attempt.
     pub fn set_retry_max(&mut self, max: usize) {
         self.retry_max = max;
+    }
+
+    /// Allow the connection to retry 429 errors with exponential backoff.
+    pub fn enable_ratelimit_retry(&mut self) {
+        self.retry_429s = true;
     }
 
     /// Establish a new connection using the given connector.
@@ -118,6 +128,7 @@ impl ReWrkConnector {
             self.host_header.clone(),
             stream,
             usage_tracker,
+            self.retry_429s,
         ))
     }
 }
@@ -127,6 +138,7 @@ pub struct ReWrkConnection {
     host_header: HeaderValue,
     stream: HttpStream,
     io_tracker: IoUsageTracker,
+    retry_429s: bool,
 }
 
 impl ReWrkConnection {
@@ -136,11 +148,13 @@ impl ReWrkConnection {
         host_header: HeaderValue,
         stream: HttpStream,
         io_tracker: IoUsageTracker,
+        retry_429s: bool,
     ) -> Self {
         Self {
             host_header,
             stream,
             io_tracker,
+            retry_429s,
         }
     }
 
@@ -155,22 +169,73 @@ impl ReWrkConnection {
     /// This will override the request host, scheme, port and host headers.
     pub(crate) async fn execute_req(
         &mut self,
-        mut request: Request<Body>,
+        request: Request<Bytes>,
     ) -> Result<(Parts, Bytes), hyper::Error> {
-        let request_uri = request.uri();
+        let (head, body) = request.into_parts();
+        let request_uri = head.uri;
         let mut builder = Uri::builder();
         if let Some(path) = request_uri.path_and_query() {
             builder = builder.path_and_query(path.clone());
         }
-        (*request.uri_mut()) = builder.build().unwrap();
-        request
-            .headers_mut()
-            .insert(header::HOST, self.host_header.clone());
+        let uri = builder.build().unwrap();
 
-        let resp = self.stream.send(request).await?;
+        if self.retry_429s {
+            let mut attempt = 1;
+            let backoff = Backoff::new(12, BACKOFF_MIN, BACKOFF_MAX);
+            for duration in &backoff {
+                let resp = self
+                    .send_request(
+                        uri.clone(),
+                        head.method.clone(),
+                        head.headers.clone(),
+                        body.clone(),
+                    )
+                    .await?;
+                let (head, body) = resp.into_parts();
+
+                if head.status == StatusCode::TOO_MANY_REQUESTS {
+                    trace!(
+                        attempt = attempt,
+                        "Request rate limited, retrying in {:?}",
+                        duration
+                    );
+                    tokio::time::sleep(duration).await;
+                    attempt += 1;
+                    continue;
+                }
+
+                let body = hyper::body::to_bytes(body).await?;
+                return Ok((head, body));
+            }
+        }
+
+        let resp = self
+            .send_request(uri, head.method, head.headers, body)
+            .await?;
         let (head, body) = resp.into_parts();
         let body = hyper::body::to_bytes(body).await?;
         Ok((head, body))
+    }
+
+    async fn send_request(
+        &mut self,
+        uri: Uri,
+        method: Method,
+        headers: HeaderMap,
+        body: Bytes,
+    ) -> Result<Response<Body>, hyper::Error> {
+        let mut new_request = Request::builder()
+            .uri(uri)
+            .method(method)
+            .body(Body::from(body))
+            .unwrap();
+
+        (*new_request.headers_mut()) = headers;
+        new_request
+            .headers_mut()
+            .insert(header::HOST, self.host_header.clone());
+
+        self.stream.send(new_request).await
     }
 }
 

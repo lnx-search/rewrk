@@ -180,6 +180,14 @@ where
     pub fn set_producer_wait_warning_threshold(&mut self, pct: f32) {
         self.worker_config.producer_wait_warning_threshold = pct;
     }
+
+    /// Enable request retries when receiving a 429 status code.
+    ///
+    /// This will retry the request upto 12 times on an exponential
+    /// backoff curve.
+    pub fn enable_ratelimit_retries(&mut self) {
+        self.worker_config.connector.enable_ratelimit_retry()
+    }
 }
 
 /// Creates a new [ReWrkConnector] using a provided protocol and URI.

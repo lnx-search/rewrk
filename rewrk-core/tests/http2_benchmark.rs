@@ -1,9 +1,9 @@
 use axum::routing::get;
 use axum::Router;
 use http::{Method, Uri};
-use hyper::Body;
 use rewrk_core::{
     Batch,
+    Bytes,
     HttpProtocol,
     Producer,
     ReWrkBenchmark,
@@ -81,7 +81,7 @@ impl Producer for BasicProducer {
             let request = http::Request::builder()
                 .method(Method::GET)
                 .uri(uri)
-                .body(Body::empty())?;
+                .body(Bytes::new())?;
             Ok(RequestBatch::Batch(Batch {
                 tag: 0,
                 requests: vec![Request::new(0, request)],

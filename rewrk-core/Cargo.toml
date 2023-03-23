@@ -21,6 +21,7 @@ thiserror = "1"
 async-trait = "0.1.64"
 tracing = "0.1.37"
 num_cpus = "1.15.0"
+exponential-backoff = "1.2.0"
 
 hyper = { version = "0.14", features = ["runtime", "client", "http1", "http2"] }
 native-tls = { version = "0.2", features = ["alpn"] }

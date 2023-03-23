@@ -3,9 +3,9 @@ use std::time::{Duration, Instant};
 use axum::routing::get;
 use axum::Router;
 use http::{Method, Uri};
-use hyper::Body;
 use rewrk_core::{
     Batch,
+    Bytes,
     HttpProtocol,
     Producer,
     ReWrkBenchmark,
@@ -101,7 +101,7 @@ impl Producer for TimedProducer {
                 let req = http::Request::builder()
                     .method(Method::GET)
                     .uri(uri.clone())
-                    .body(Body::empty())?;
+                    .body(Bytes::new())?;
                 Ok::<_, http::Error>(Request::new(0, req))
             })
             .collect::<Result<Vec<_>, _>>()?;

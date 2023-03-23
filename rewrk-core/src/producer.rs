@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use flume::Receiver;
-use hyper::Body;
+use hyper::body::Bytes;
 use tokio::sync::oneshot;
 
 /// A batch of requests or single to the workers.
@@ -16,12 +16,12 @@ pub enum RequestBatch {
 /// The given request payload for executing.
 pub struct Request {
     pub(crate) id: usize,
-    pub(crate) inner: http::Request<Body>,
+    pub(crate) inner: http::Request<Bytes>,
 }
 
 impl Request {
     /// Create a new request.
-    pub fn new(id: usize, inner: http::Request<Body>) -> Self {
+    pub fn new(id: usize, inner: http::Request<Bytes>) -> Self {
         Self { id, inner }
     }
 }
@@ -84,7 +84,7 @@ pub struct Batch {
 ///             let request = http::Request::builder()
 ///                 .method(Method::GET)
 ///                 .uri(uri)
-///                 .body(Body::empty())?;
+///                 .body(hyper::body::Bytes::new())?;
 ///             Ok(RequestBatch::Batch(Batch {
 ///                 tag: 0,
 ///                 requests: vec![Request::new(0, request)],
