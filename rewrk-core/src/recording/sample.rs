@@ -75,8 +75,8 @@ impl SampleFactory {
             total_requests: 0,
             total_successful_requests: 0,
             latency: Vec::with_capacity(5 << 10),
-            write_transfer: Vec::with_capacity(5 << 10),
-            read_transfer: Vec::with_capacity(5 << 10),
+            write_transfer_total: 0,
+            read_transfer_total: 0,
             errors: Vec::with_capacity(4),
             metadata: self.metadata,
         }
@@ -116,8 +116,8 @@ pub struct Sample {
     total_successful_requests: usize,
 
     latency: Vec<Duration>,
-    write_transfer: Vec<u32>,
-    read_transfer: Vec<u32>,
+    write_transfer_total: u64,
+    read_transfer_total: u64,
 
     errors: Vec<ValidationError>,
     metadata: SampleMetadata,
@@ -136,16 +136,12 @@ impl Sample {
     /// The memory consumed by the sample
     pub fn allocation_usage(&self) -> usize {
         self.latency.len() * size_of::<Duration>()
-            + self.write_transfer.len() * size_of::<u32>()
-            + self.read_transfer.len() * size_of::<u32>()
             + self.errors.len() * size_of::<ValidationError>()
     }
 
     /// Sorts the sample values from smallest to largest.
     pub(crate) fn sort_values(&mut self) {
         self.latency.sort();
-        self.write_transfer.sort();
-        self.read_transfer.sort();
     }
 
     /// The total number of requests within the sample including any errors.
@@ -180,14 +176,14 @@ impl Sample {
         &self.latency
     }
 
-    /// The sample write transfer rate
-    pub fn write_transfer(&self) -> &[u32] {
-        &self.write_transfer
+    /// The sample write transfer in bytes
+    pub fn write_transfer_total(&self) -> u64 {
+        self.write_transfer_total
     }
 
-    /// The sample read transfer rate
-    pub fn read_transfer(&self) -> &[u32] {
-        &self.read_transfer
+    /// The sample read transfer in bytes
+    pub fn read_transfer_total(&self) -> u64 {
+        self.read_transfer_total
     }
 
     /// Calculates the mean average from a given percentile set of values.
@@ -200,45 +196,13 @@ impl Sample {
     }
 
     /// Calculates the mean average from a given percentile set of values.
-    pub fn write_transfer_mean(&self) -> f64 {
-        self.write_transfer().iter().map(|v| *v as f64).sum::<f64>()
-            / self.write_transfer().len() as f64
-    }
-
-    /// Calculates the mean average from a given percentile set of values.
-    pub fn read_transfer_mean(&self) -> f64 {
-        self.read_transfer().iter().map(|v| *v as f64).sum::<f64>()
-            / self.read_transfer().len() as f64
-    }
-
-    /// Calculates the mean average from a given percentile set of values.
     pub fn latency_percentile_mean(&self, pct: f64) -> Duration {
         get_latency_percentile_mean(self.latency(), pct)
-    }
-
-    /// Calculates the mean average from a given percentile set of values.
-    pub fn write_transfer_percentile_mean(&self, pct: f64) -> f64 {
-        get_transfer_percentile_mean(self.write_transfer(), pct)
-    }
-
-    /// Calculates the mean average from a given percentile set of values.
-    pub fn read_transfer_percentile_mean(&self, pct: f64) -> f64 {
-        get_transfer_percentile_mean(self.read_transfer(), pct)
     }
 
     /// Calculates the nth percentile of values.
     pub fn latency_percentile(&self, pct: f64) -> Duration {
         get_percentile(self.latency(), pct)
-    }
-
-    /// Calculates the nth percentile of values.
-    pub fn write_transfer_percentile(&self, pct: f64) -> u32 {
-        get_percentile(self.write_transfer(), pct)
-    }
-
-    /// Calculates the nth percentile of values.
-    pub fn read_transfer_percentile(&self, pct: f64) -> u32 {
-        get_percentile(self.read_transfer(), pct)
     }
 
     /// Gets the max value within the set.
@@ -247,34 +211,10 @@ impl Sample {
         self.latency().last().copied().unwrap_or_default()
     }
 
-    /// Gets the max value within the set.
-    pub fn write_transfer_max(&self) -> u32 {
-        // We assume our values are ordered smallest -> largest
-        self.write_transfer().last().copied().unwrap_or_default()
-    }
-
-    /// Gets the max value within the set.
-    pub fn read_transfer_max(&self) -> u32 {
-        // We assume our values are ordered smallest -> largest
-        self.read_transfer().last().copied().unwrap_or_default()
-    }
-
     /// Gets the min value within the set.
     pub fn latency_min(&self) -> Duration {
         // We assume our values are ordered smallest -> largest
         self.latency().first().copied().unwrap_or_default()
-    }
-
-    /// Gets the min value within the set.
-    pub fn write_transfer_min(&self) -> u32 {
-        // We assume our values are ordered smallest -> largest
-        self.write_transfer().first().copied().unwrap_or_default()
-    }
-
-    /// Gets the min value within the set.
-    // We assume our values are ordered smallest -> largest
-    pub fn read_transfer_min(&self) -> u32 {
-        self.read_transfer().first().copied().unwrap_or_default()
     }
 
     /// Gets the min value within the set.
@@ -297,50 +237,6 @@ impl Sample {
 
         let variance = sum_delta / self.latency().len() as f64;
         Duration::from_secs_f64(variance.powf(0.5))
-    }
-
-    /// Gets the min value within the set.
-    pub fn write_transfer_stdev(&self) -> f64 {
-        if self.write_transfer().is_empty() {
-            return 0.0;
-        }
-
-        let mean = self.write_transfer_mean();
-        let sum_delta: f64 = self
-            .write_transfer()
-            .iter()
-            .map(|rate| {
-                let time = *rate as f64;
-                let delta = time - mean;
-
-                delta.powi(2)
-            })
-            .sum();
-
-        let variance = sum_delta / self.write_transfer().len() as f64;
-        variance.powf(0.5)
-    }
-
-    /// Gets the min value within the set.
-    pub fn read_transfer_stdev(&self) -> f64 {
-        if self.read_transfer().is_empty() {
-            return 0.0;
-        }
-
-        let mean = self.read_transfer_mean();
-        let sum_delta: f64 = self
-            .read_transfer()
-            .iter()
-            .map(|rate| {
-                let time = *rate as f64;
-                let delta = time - mean;
-
-                delta.powi(2)
-            })
-            .sum();
-
-        let variance = sum_delta / self.read_transfer().len() as f64;
-        variance.powf(0.5)
     }
 
     /// The errors that occurred during the sample
@@ -398,14 +294,14 @@ impl Sample {
 
     #[inline]
     /// Record a write transfer rate.
-    pub(crate) fn record_write_transfer(&mut self, delta: u64, dur: Duration) {
-        self.write_transfer.push(calculate_rate(delta, dur));
+    pub(crate) fn record_write_transfer(&mut self, num_bytes: u64) {
+        self.write_transfer_total += num_bytes;
     }
 
     #[inline]
     /// Record a read transfer rate.
-    pub(crate) fn record_read_transfer(&mut self, delta: u64, dur: Duration) {
-        self.read_transfer.push(calculate_rate(delta, dur));
+    pub(crate) fn record_read_transfer(&mut self, num_bytes: u64) {
+        self.read_transfer_total += num_bytes;
     }
 }
 
@@ -437,15 +333,10 @@ impl AddAssign for Sample {
         self.total_requests += rhs.total_requests;
         self.total_successful_requests += rhs.total_successful_requests;
         self.latency.extend(rhs.latency);
-        self.read_transfer.extend(rhs.read_transfer);
-        self.write_transfer.extend(rhs.write_transfer);
+        self.read_transfer_total += rhs.read_transfer_total;
+        self.write_transfer_total += rhs.write_transfer_total;
         self.errors.extend(rhs.errors);
     }
-}
-
-#[inline]
-fn calculate_rate(delta: u64, dur: Duration) -> u32 {
-    (delta as f64 / dur.as_secs_f64()).round() as u32
 }
 
 /// Calculates the mean latency from a percentile of the response times.
@@ -467,25 +358,6 @@ fn get_latency_percentile_mean(samples: &[Duration], pct: f64) -> Duration {
     let avg = total / pct.len() as f64;
 
     Duration::from_secs_f64(avg)
-}
-
-/// Calculates the mean latency from a percentile of the response times.
-fn get_transfer_percentile_mean(samples: &[u32], pct: f64) -> f64 {
-    if samples.is_empty() {
-        return 0.0;
-    }
-
-    let mut len = samples.len() as f64 * pct;
-    if len < 1.0 {
-        len = 1.0;
-    }
-
-    let e = format!("failed to calculate P{} avg", pct * 100.0);
-    let pct = samples.chunks(len as usize).next().expect(&e);
-
-    let total: u64 = pct.iter().map(|v| *v as u64).sum();
-
-    total as f64 / pct.len() as f64
 }
 
 fn get_percentile<V: Copy + Default>(samples: &[V], pct: f64) -> V {

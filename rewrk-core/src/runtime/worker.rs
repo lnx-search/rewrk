@@ -462,10 +462,8 @@ impl WorkerConnection {
         } else {
             self.sample.record_successful_request();
             self.sample.record_latency(elapsed_time);
-            self.sample
-                .record_read_transfer(response.read_bytes, elapsed_time);
-            self.sample
-                .record_write_transfer(response.written_bytes, elapsed_time);
+            self.sample.record_read_transfer(response.read_bytes);
+            self.sample.record_write_transfer(response.written_bytes);
         }
 
         // Submit the sample if it's window interval has elapsed.

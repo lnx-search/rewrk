@@ -44,8 +44,6 @@ async fn test_basic_benchmark() {
     let sample = collector.samples.remove(0);
     assert_eq!(sample.tag(), 0);
     assert_eq!(sample.latency().len(), 1);
-    assert_eq!(sample.read_transfer().len(), 1);
-    assert_eq!(sample.write_transfer().len(), 1);
 }
 
 async fn run_server() {
