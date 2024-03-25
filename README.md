@@ -74,13 +74,18 @@ USAGE:
 FLAGS:
         --help       Prints help information
         --http2      Set the client to use http2 only. (default is http/1) e.g. '--http2'
+        --json       Displays the results in a json format
         --pct        Displays the percentile table after benchmarking.
     -V, --version    Prints version information
 
 OPTIONS:
+    -b, --body <body>                  Add body to request e.g. '-b "foo"'
     -c, --connections <connections>    Set the amount of concurrent e.g. '-c 512' [default: 1]
     -d, --duration <duration>          Set the duration of the benchmark.
+    -H, --header <header>...           Add header to request e.g. '-H "content-type: text/plain"'
     -h, --host <host>                  Set the host to bench e.g. '-h http://127.0.0.1:5050'
+    -m, --method <method>...           Set request method e.g. '-m get'
+    -r, --rounds <rounds>              Repeats the benchmarks n amount of times
     -t, --threads <threads>            Set the amount of threads to use e.g. '-t 12' [default: 1]
 ```
 
